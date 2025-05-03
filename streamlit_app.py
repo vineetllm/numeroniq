@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import yfinance as yf
+import re
 
 # Set wide layout
 st.set_page_config(page_title="Stock Screener - IPO & Numerology", layout="wide")
@@ -25,10 +26,52 @@ def load_numerology_data():
 stock_df = load_stock_data()
 numerology_df = load_numerology_data()
 
+import re
+
+# === Chaldean Numerology Setup ===
+chaldean_map = {
+    1: 'A I J Q Y',
+    2: 'B K R',
+    3: 'C G L S',
+    4: 'D M T',
+    5: 'E H N X',
+    6: 'U V W',
+    7: 'O Z',
+    8: 'F P'
+}
+
+char_to_num = {letter: num for num, letters in chaldean_map.items() for letter in letters.split()}
+
+def get_word_value(word):
+    return sum(char_to_num.get(char.upper(), 0) for char in word)
+
+def reduce_to_single_digit(n):
+    while n > 9:
+        n = sum(int(d) for d in str(n))
+    return n
+
+def calculate_numerology(name):
+    words = re.findall(r'\b[A-Za-z]+\b', name)
+    word_parts = []
+    reduced_values = []
+
+    for word in words:
+        word_val = get_word_value(word)
+        reduced_val = reduce_to_single_digit(word_val)
+        word_parts.append(f"{word_val}({reduced_val})")
+        reduced_values.append(reduced_val)
+
+    total_sum = sum(reduced_values)
+    final_val = reduce_to_single_digit(total_sum)
+
+    equation = f"{' + '.join(word_parts)} = ({total_sum}){final_val}"
+    return final_val, equation
+
+
 st.title("📊 Stock Screener - IPO & Numerology Insight")
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Filter by Sector/Symbol", "Filter by Numerology", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Filter by Sector/Symbol", "Filter by Numerology","Name Numerology (Company Name)", "View Nifty/BankNifty OHLC"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -268,6 +311,49 @@ elif filter_mode == "Filter by Numerology":
     else:
         st.info("No companies found with matching numerology dates.")
 
+elif filter_mode == "Name Numerology (Company Name)":
+    st.subheader("🔢 Chaldean Name Numerology for Company Names")
+    
+    numerology_data = []
+    for _, row in stock_df.iterrows():
+        company = row['Company Name']
+        final_num, eqn = calculate_numerology(company)
+        numerology_data.append({
+            'Symbol': row['Symbol'],
+            'Company Name': company,
+            'Numerology Final': final_num,
+            'Numerology Equation': eqn
+        })
+
+    numerology_df_display = pd.DataFrame(numerology_data)
+
+    # === Filters ===
+    col1, col2 = st.columns(2)
+
+    with col1:
+        company_filter = st.selectbox(
+            "Select Company (or choose All)",
+            options=["All"] + sorted(numerology_df_display['Company Name'].unique())
+        )
+
+    with col2:
+        number_filter = st.selectbox(
+            "Select Final Numerology Number",
+            options=["All"] + sorted(numerology_df_display['Numerology Final'].unique())
+        )
+
+    filtered_df = numerology_df_display.copy()
+
+    if company_filter != "All":
+        filtered_df = filtered_df[filtered_df['Company Name'] == company_filter]
+
+    if number_filter != "All":
+        filtered_df = filtered_df[filtered_df['Numerology Final'] == number_filter]
+
+    # === Display Filtered Table ===
+    st.dataframe(filtered_df, use_container_width=True)
+
+
 elif filter_mode == "View Nifty/BankNifty OHLC":
     st.subheader("📈 Nifty & BankNifty OHLC Viewer")
 
@@ -409,5 +495,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
     
+
 
 
