@@ -1,3 +1,5 @@
 streamlit
 openpyxl
 yfinance
+datetime
+plotly
