@@ -22,6 +22,15 @@ def load_numerology_data():
     df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
     return df
 
+def calculate_destiny_number(date_obj):
+    if pd.isnull(date_obj):
+        return None, None
+    digits = [int(ch) for ch in date_obj.strftime('%Y%m%d')]
+    total = sum(digits)
+    reduced = reduce_to_single_digit(total)
+    return total, reduced
+
+
 # Load data
 stock_df = load_stock_data()
 numerology_df = load_numerology_data()
@@ -51,7 +60,10 @@ def reduce_to_single_digit(n):
     return n
 
 def calculate_numerology(name):
-    words = re.findall(r'\b[A-Za-z]+\b', name)
+    
+    clean_name = re.sub(r'[^A-Za-z ]+', '', name)
+
+    words = re.findall(r'\b[A-Za-z]+\b', clean_name)
     word_parts = []
     reduced_values = []
 
@@ -61,11 +73,15 @@ def calculate_numerology(name):
         word_parts.append(f"{word_val}({reduced_val})")
         reduced_values.append(reduced_val)
 
+    if not reduced_values:
+        return None, None  
+
     total_sum = sum(reduced_values)
     final_val = reduce_to_single_digit(total_sum)
 
     equation = f"{' + '.join(word_parts)} = ({total_sum}){final_val}"
     return final_val, equation
+
 
 
 st.title("📊 Stock Screener - IPO & Numerology Insight")
@@ -217,6 +233,11 @@ elif filter_mode == "Filter by Numerology":
 
     # Step 2: Start with full numerology data
     filtered_numerology = numerology_df.copy()
+    # Calculate DN dynamically
+    dn_values = filtered_numerology['date'].apply(calculate_destiny_number)
+    filtered_numerology['DN Raw'] = dn_values.apply(lambda x: x[0])
+    filtered_numerology['DN'] = dn_values.apply(lambda x: x[1])
+    filtered_numerology['DN (Formatted)'] = filtered_numerology.apply(lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None, axis=1)
 
     # Prepare layout
     col1, col2, col3, col4, col5 = st.columns(5)
@@ -256,12 +277,6 @@ elif filter_mode == "Filter by Numerology":
         if selected_dayn != "All":
             filtered_numerology = filtered_numerology[filtered_numerology['Day Number'] == selected_dayn]
 
-    # === Show Filtered Numerology Table ===
-    st.markdown("### 🔮 Filtered Numerology Table")
-    if not filtered_numerology.empty:
-        st.dataframe(filtered_numerology, use_container_width=True)
-    else:
-        st.warning("No matching numerology records found.")
 
     # Create a mapping of dates to numerology rows (after filter)
     filtered_numerology_map = filtered_numerology.set_index('date')
@@ -303,8 +318,9 @@ elif filter_mode == "Filter by Numerology":
                 matching_stocks[col] = pd.to_datetime(matching_stocks[col], errors='coerce').dt.strftime('%Y-%m-%d')
 
         # Reorder to show date source
-        cols_order = ['Symbol', date_match_option, 'BN', 'DN', 'SN', 'HP', 'Day Number'] + \
-             [col for col in matching_stocks.columns if col not in ['Symbol', 'Matching Date Source', date_match_option, 'BN', 'DN', 'SN', 'HP', 'Day Number']]
+        cols_order = ['Symbol', date_match_option, 'BN', 'DN (Formatted)', 'SN', 'HP', 'Day Number'] + \
+            [col for col in matching_stocks.columns if col not in ['Symbol', 'Matching Date Source', date_match_option, 'BN', 'DN', 'DN (Formatted)', 'SN', 'HP', 'Day Number']]
+
 
         st.dataframe(matching_stocks[cols_order], use_container_width=True)
 
@@ -314,15 +330,35 @@ elif filter_mode == "Filter by Numerology":
 elif filter_mode == "Name Numerology (Company Name)":
     st.subheader("🔢 Chaldean Name Numerology for Company Names")
     
+    use_ltd = st.radio(
+        "For company names that contain 'Ltd' or 'Limited', include it in numerology calculation?",
+        ["Yes", "No"],
+        index=1
+    )
+
+
     numerology_data = []
     for _, row in stock_df.iterrows():
-        company = row['Company Name']
-        final_num, eqn = calculate_numerology(company)
+        company_original = row['Company Name']
+        symbol = str(row['Symbol'])
+
+        # Remove 'Ltd' or 'Limited' if user chose "No"
+        if use_ltd == "No":
+            company_clean = re.sub(r'\b(Ltd|Limited)\b', '', company_original, flags=re.IGNORECASE).strip()
+        else:
+            company_clean = company_original
+
+        # Calculate numerology
+        company_num, company_eq = calculate_numerology(company_clean)
+        symbol_num, symbol_eq = calculate_numerology(symbol)
+
         numerology_data.append({
             'Symbol': row['Symbol'],
-            'Company Name': company,
-            'Numerology Final': final_num,
-            'Numerology Equation': eqn
+            'Company Name': company_original,
+            'Company Numerology Final': company_num,
+            'Numerology Equation (Company Name)': company_eq,
+            'Symbol Numerology Final': symbol_num,
+            'Numerology Equation (Symbol)': symbol_eq
         })
 
     numerology_df_display = pd.DataFrame(numerology_data)
@@ -339,7 +375,7 @@ elif filter_mode == "Name Numerology (Company Name)":
     with col2:
         number_filter = st.selectbox(
             "Select Final Numerology Number",
-            options=["All"] + sorted(numerology_df_display['Numerology Final'].unique())
+            options=["All"] + sorted(numerology_df_display['Company Numerology Final'].unique())
         )
 
     filtered_df = numerology_df_display.copy()
@@ -348,7 +384,10 @@ elif filter_mode == "Name Numerology (Company Name)":
         filtered_df = filtered_df[filtered_df['Company Name'] == company_filter]
 
     if number_filter != "All":
-        filtered_df = filtered_df[filtered_df['Numerology Final'] == number_filter]
+        filtered_df = filtered_df[filtered_df['Company Numerology Final'] == number_filter]
+    
+    filtered_df = filtered_df.drop(columns=['Company Numerology Final', 'Symbol Numerology Final'], errors='ignore')
+
 
     # === Display Filtered Table ===
     st.dataframe(filtered_df, use_container_width=True)
@@ -495,6 +534,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
     
+
 
 
 
