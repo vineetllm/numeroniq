@@ -2,6 +2,8 @@ import streamlit as st
 import pandas as pd
 import yfinance as yf
 import re
+import plotly.graph_objects as go
+from datetime import datetime
 
 # Set wide layout
 st.set_page_config(page_title="Stock Screener - IPO & Numerology", layout="wide")
@@ -30,6 +32,35 @@ def calculate_destiny_number(date_obj):
     reduced = reduce_to_single_digit(total)
     return total, reduced
 
+def get_stock_data(ticker, start_date, end_date):
+    """
+    Fetch historical stock data using yfinance.
+    """
+    stock_data = yf.download(ticker, start=start_date, end=end_date)
+    return stock_data
+
+def plot_candlestick_chart(stock_data):
+    """
+    Generate and return a candlestick chart using Plotly.
+    """
+    fig = go.Figure(data=[go.Candlestick(
+        x=stock_data.index,
+        open=stock_data['Open'],
+        high=stock_data['High'],
+        low=stock_data['Low'],
+        close=stock_data['Close'],
+        increasing_line_color='green',
+        decreasing_line_color='red'
+    )])
+    
+    fig.update_layout(
+        title="Candlestick chart",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        xaxis_rangeslider_visible=False
+    )
+    
+    return fig
 
 # Load data
 stock_df = load_stock_data()
@@ -87,7 +118,7 @@ def calculate_numerology(name):
 st.title("📊 Stock Screener - IPO & Numerology Insight")
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Filter by Sector/Symbol", "Filter by Numerology","Name Numerology (Company Name)", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology (Company Name)", "View Nifty/BankNifty OHLC"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -392,6 +423,115 @@ elif filter_mode == "Name Numerology (Company Name)":
     # === Display Filtered Table ===
     st.dataframe(filtered_df, use_container_width=True)
 
+elif filter_mode == "Home":
+    st.title("🏠 Company Snapshot")
+
+    # Prepare searchable list for suggestions
+    search_options = stock_df['Symbol'].dropna().tolist() + stock_df['Company Name'].dropna().tolist()
+    search_options = sorted(set(search_options))
+
+    user_input = st.selectbox("Search by Symbol or Company Name:", options=[""] + search_options)
+
+    if user_input:
+        # Case-insensitive match
+        company_info = stock_df[
+            (stock_df['Symbol'].str.lower() == user_input.lower()) |
+            (stock_df['Company Name'].str.lower() == user_input.lower())
+        ]
+
+        if not company_info.empty:
+            row = company_info.iloc[0]
+
+            # --- Line 1: Sector, Sub-sector, ISIN Code ---
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"**Sector:** {row.get('SECTOR', 'N/A')}")
+            with col2:
+                st.markdown(f"**Sub-Sector:** {row.get('SUB SECTOR', 'N/A')}")
+            with col3:
+                st.markdown(f"**ISIN Code:** {row.get('ISIN Code', 'N/A')}")
+
+            # --- Line 2: Dates ---
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"**Date of Incorporation:** {row['DATE OF INCORPORATION'].date() if pd.notnull(row['DATE OF INCORPORATION']) else 'N/A'}")
+            with col2:
+                st.markdown(f"**NSE Listing Date:** {row['NSE LISTING DATE'].date() if pd.notnull(row['NSE LISTING DATE']) else 'N/A'}")
+            with col3:
+                st.markdown(f"**BSE Listing Date:** {row['BSE LISTING DATE'].date() if pd.notnull(row['BSE LISTING DATE']) else 'N/A'}")
+
+            # --- Line 3: Ages ---
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"**DOC Age:** {row.get('DOC age', 'N/A')}")
+            with col2:
+                st.markdown(f"**NSE Age:** {row.get('NSE age', 'N/A')}")
+            with col3:
+                st.markdown(f"**BSE Age:** {row.get('BSE age', 'N/A')}")
+
+            # --- Line 4: Name Numerology ---
+            st.markdown("### 🔢 Name Numerology")
+
+            use_ltd_home = st.radio(
+                "Include 'Ltd' or 'Limited' in company name (if present)?",
+                ["Yes", "No"],
+                index=1,
+                key="home_ltd"
+            )
+
+            company_name_original = str(row['Company Name'])
+            symbol_name = str(row['Symbol'])
+
+            if use_ltd_home == "No":
+                company_clean = re.sub(r'\b(Ltd|Limited)\b', '', company_name_original, flags=re.IGNORECASE).strip()
+            else:
+                company_clean = company_name_original
+
+            company_num, company_eq = calculate_numerology(company_clean)
+            symbol_num, symbol_eq = calculate_numerology(symbol_name)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.markdown(f"**Company Name Equation:** {company_eq}")
+            with col2:
+                st.markdown(f"**Symbol Equation:** {symbol_eq}")
+
+
+            # --- Line 5: Zodiac Signs ---
+            st.markdown("### ♈ Zodiac Information (Based on Dates)")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                st.markdown(f"**DOC Zodiac Sign:** {row.get('DOC zodiac sign', 'N/A')}")
+                st.markdown(f"**DOC Zodiac Number:** {row.get('DOC zodiac number', 'N/A')}")
+
+            with col2:
+                st.markdown(f"**NSE Zodiac Sign:** {row.get('NSE zodiac sign', 'N/A')}")
+                st.markdown(f"**NSE Zodiac Number:** {row.get('NSE zodiac number', 'N/A')}")
+
+            with col3:
+                st.markdown(f"**BSE Zodiac Sign:** {row.get('BSE zodiac sign', 'N/A')}")
+                st.markdown(f"**BSE Zodiac Number:** {row.get('BSE zodiac number', 'N/A')}")
+
+            # --- Candlestick Chart (After Zodiac Info) ---
+            st.markdown("### 📈 Stock Price Candlestick Chart")
+
+            # Add start and end date selectors for the user to filter the data range
+            start_date = st.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
+            end_date = st.date_input("End Date", value=pd.to_datetime("2025-01-01"))
+
+            ticker = row['Symbol']  # Get the company's symbol
+
+            if start_date and end_date:
+                stock_data = get_stock_data(ticker, start_date, end_date)
+                if not stock_data.empty:
+                    chart = plot_candlestick_chart(stock_data)
+                    st.plotly_chart(chart)
+                else:
+                    st.warning("No data available for the selected date range.")
+        else:
+            st.warning("No matching company found.")
+
 
 elif filter_mode == "View Nifty/BankNifty OHLC":
     st.subheader("📈 Nifty & BankNifty OHLC Viewer")
@@ -534,6 +674,11 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
     
+
+
+
+
+
 
 
 
