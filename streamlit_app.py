@@ -91,27 +91,26 @@ def reduce_to_single_digit(n):
     return n
 
 def calculate_numerology(name):
-    
     clean_name = re.sub(r'[^A-Za-z ]+', '', name)
-
     words = re.findall(r'\b[A-Za-z]+\b', clean_name)
+
     word_parts = []
-    reduced_values = []
+    original_values = []
 
     for word in words:
         word_val = get_word_value(word)
         reduced_val = reduce_to_single_digit(word_val)
         word_parts.append(f"{word_val}({reduced_val})")
-        reduced_values.append(reduced_val)
+        original_values.append(word_val)
 
-    if not reduced_values:
-        return None, None  
+    if not original_values:
+        return None, None
 
-    total_sum = sum(reduced_values)
-    final_val = reduce_to_single_digit(total_sum)
+    total_sum = sum(original_values)
+    final_reduced = reduce_to_single_digit(total_sum)
 
-    equation = f"{' + '.join(word_parts)} = ({total_sum}){final_val}"
-    return final_val, equation
+    equation = f"{' + '.join(word_parts)} = {total_sum}({final_reduced})"
+    return final_reduced, equation
 
 
 
@@ -674,6 +673,11 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
     
+
+
+
+
+
 
 
 
