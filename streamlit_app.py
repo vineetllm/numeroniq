@@ -80,7 +80,45 @@ chaldean_map = {
     8: 'F P'
 }
 
+# === Pythagorean Numerology Setup ===
+pythagorean_map = {
+    1: 'A J S',
+    2: 'B K T',
+    3: 'C L U',
+    4: 'D M V',
+    5: 'E N W',
+    6: 'F O X',
+    7: 'G P Y',
+    8: 'H Q Z',
+    9: 'I R'
+}
+
 char_to_num = {letter: num for num, letters in chaldean_map.items() for letter in letters.split()}
+
+pythagorean_char_to_num = {
+    letter: num for num, letters in pythagorean_map.items() for letter in letters.split()
+}
+
+def calculate_pythagorean_numerology(name):
+    clean_name = re.sub(r'[^A-Za-z ]+', '', name)
+    words = re.findall(r'\b[A-Za-z]+\b', clean_name)
+
+    word_parts = []
+    original_values = []
+
+    for word in words:
+        word_val = sum(pythagorean_char_to_num.get(char.upper(), 0) for char in word)
+        reduced_val = reduce_to_single_digit(word_val)
+        word_parts.append(f"{word_val}({reduced_val})")
+        original_values.append(word_val)
+
+    if not original_values:
+        return None, None
+
+    total_sum = sum(original_values)
+    final_reduced = reduce_to_single_digit(total_sum)
+    equation = f"{' + '.join(word_parts)} = {total_sum}({final_reduced})"
+    return final_reduced, equation
 
 def get_word_value(word):
     return sum(char_to_num.get(char.upper(), 0) for char in word)
@@ -366,8 +404,13 @@ elif filter_mode == "Name Numerology (Company Name)":
         index=1
     )
 
+    numerology_system = st.radio(
+        "Select Numerology System:",
+        ["Chaldean", "Pythagoras", "Both"]
+    )
 
     numerology_data = []
+
     for _, row in stock_df.iterrows():
         company_original = row['Company Name']
         symbol = str(row['Symbol'])
@@ -378,18 +421,25 @@ elif filter_mode == "Name Numerology (Company Name)":
         else:
             company_clean = company_original
 
-        # Calculate numerology
-        company_num, company_eq = calculate_numerology(company_clean)
-        symbol_num, symbol_eq = calculate_numerology(symbol)
-
-        numerology_data.append({
+        entry = {
             'Symbol': row['Symbol'],
             'Company Name': company_original,
-            'Company Numerology Final': company_num,
-            'Numerology Equation (Company Name)': company_eq,
-            'Symbol Numerology Final': symbol_num,
-            'Numerology Equation (Symbol)': symbol_eq
-        })
+        }
+
+        if numerology_system in ["Chaldean", "Both"]:
+            ch_company_num, ch_company_eq = calculate_numerology(company_clean)
+            ch_symbol_num, ch_symbol_eq = calculate_numerology(symbol)
+            entry['Chaldean Eqn (Company Name)'] = ch_company_eq
+            entry['Chaldean Eqn (Symbol)'] = ch_symbol_eq
+
+        if numerology_system in ["Pythagoras", "Both"]:
+            py_company_num, py_company_eq = calculate_pythagorean_numerology(company_clean)
+            py_symbol_num, py_symbol_eq = calculate_pythagorean_numerology(symbol)
+            entry['Pythagoras Eqn (Company Name)'] = py_company_eq
+            entry['Pythagoras Eqn (Symbol)'] = py_symbol_eq
+
+        numerology_data.append(entry)
+
 
     numerology_df_display = pd.DataFrame(numerology_data)
 
@@ -402,21 +452,61 @@ elif filter_mode == "Name Numerology (Company Name)":
             options=["All"] + sorted(numerology_df_display['Company Name'].unique())
         )
 
-    with col2:
-        number_filter = st.selectbox(
-            "Select Final Numerology Number",
-            options=["All"] + sorted(numerology_df_display['Company Numerology Final'].unique())
-        )
 
     filtered_df = numerology_df_display.copy()
 
     if company_filter != "All":
         filtered_df = filtered_df[filtered_df['Company Name'] == company_filter]
 
-    if number_filter != "All":
-        filtered_df = filtered_df[filtered_df['Company Numerology Final'] == number_filter]
-    
-    filtered_df = filtered_df.drop(columns=['Company Numerology Final', 'Symbol Numerology Final'], errors='ignore')
+    if numerology_system in ["Chaldean", "Both"]:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            ch_company_totals = numerology_df_display['Chaldean Eqn (Company Name)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_ch_company = st.selectbox("Chaldean Total (Company Name)", ["All"] + sorted(ch_company_totals.dropna().unique()))
+
+        with col2:
+            ch_symbol_totals = numerology_df_display['Chaldean Eqn (Symbol)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_ch_symbol = st.selectbox("Chaldean Total (Symbol)", ["All"] + sorted(ch_symbol_totals.dropna().unique()))
+
+        if selected_ch_company != "All":
+            filtered_df = filtered_df[
+                filtered_df['Chaldean Eqn (Company Name)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_ch_company)
+            ]
+
+        if selected_ch_symbol != "All":
+            filtered_df = filtered_df[
+                filtered_df['Chaldean Eqn (Symbol)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_ch_symbol)
+            ]
+
+    if numerology_system in ["Pythagoras", "Both"]:
+        col1, col2 = st.columns(2)
+
+        with col1:
+            py_company_totals = numerology_df_display['Pythagoras Eqn (Company Name)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_py_company = st.selectbox("Pythagoras Total (Company Name)", ["All"] + sorted(py_company_totals.dropna().unique()))
+
+        with col2:
+            py_symbol_totals = numerology_df_display['Pythagoras Eqn (Symbol)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_py_symbol = st.selectbox("Pythagoras Total (Symbol)", ["All"] + sorted(py_symbol_totals.dropna().unique()))
+
+        if selected_py_company != "All":
+            filtered_df = filtered_df[
+                filtered_df['Pythagoras Eqn (Company Name)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_py_company)
+            ]
+
+        if selected_py_symbol != "All":
+            filtered_df = filtered_df[
+                filtered_df['Pythagoras Eqn (Symbol)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_py_symbol)
+            ]
 
 
     # === Display Filtered Table ===
@@ -519,7 +609,7 @@ elif filter_mode == "Home":
             start_date = st.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
             end_date = st.date_input("End Date", value=pd.to_datetime("2025-01-01"))
 
-            ticker = row['Symbol']  # Get the company's symbol
+            ticker = str(row['Symbol']).upper() + ".NS"  # Get the company's symbol
 
             if start_date and end_date:
                 stock_data = get_stock_data(ticker, start_date, end_date)
@@ -673,15 +763,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
     
-
-
-
-
-
-
-
-
-
 
 
 
