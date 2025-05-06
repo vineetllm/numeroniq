@@ -4,6 +4,24 @@ import yfinance as yf
 import re
 import plotly.graph_objects as go
 from datetime import datetime
+import base64
+
+def set_background(local_img_path):
+    with open(local_img_path, "rb") as f:
+        data = f.read()
+    encoded = base64.b64encode(data).decode()
+
+    page_bg_img = f"""
+    <style>
+    [data-testid="stApp"] {{
+      background-image: url("data:image/jpg;base64,{encoded}");
+      background-size: cover;
+      background-repeat: no-repeat;
+      background-position: center;
+    }}
+    </style>
+    """
+    st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
@@ -36,7 +54,7 @@ def get_stock_data(ticker, start_date, end_date):
     """
     Fetch historical stock data using yfinance.
     """
-    stock_data = yf.download(ticker, start=start_date, end=end_date)
+    stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
 def plot_candlestick_chart(stock_data):
@@ -576,15 +594,23 @@ elif filter_mode == "Home":
             else:
                 company_clean = company_name_original
 
-            company_num, company_eq = calculate_numerology(company_clean)
-            symbol_num, symbol_eq = calculate_numerology(symbol_name)
+            # Chaldean system
+            ch_company_num, ch_company_eq = calculate_numerology(company_clean)
+            ch_symbol_num, ch_symbol_eq = calculate_numerology(symbol_name)
 
+            # Pythagorean system
+            py_company_num, py_company_eq = calculate_pythagorean_numerology(company_clean)
+            py_symbol_num, py_symbol_eq = calculate_pythagorean_numerology(symbol_name)
+
+            # Display equations side by side
             col1, col2 = st.columns(2)
             with col1:
-                st.markdown(f"**Company Name Equation:** {company_eq}")
-            with col2:
-                st.markdown(f"**Symbol Equation:** {symbol_eq}")
+                st.markdown(f"**Chaldean Eqn (Company Name):** {ch_company_eq}")
+                st.markdown(f"**Chaldean Eqn (Symbol):** {ch_symbol_eq}")
 
+            with col2:
+                st.markdown(f"**Pythagoras Eqn (Company Name):** {py_company_eq}")
+                st.markdown(f"**Pythagoras Eqn (Symbol):** {py_symbol_eq}")
 
             # --- Line 5: Zodiac Signs ---
             st.markdown("### ♈ Zodiac Information (Based on Dates)")
