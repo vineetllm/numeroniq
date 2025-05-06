@@ -6,22 +6,6 @@ import plotly.graph_objects as go
 from datetime import datetime
 import base64
 
-def set_background(local_img_path):
-    with open(local_img_path, "rb") as f:
-        data = f.read()
-    encoded = base64.b64encode(data).decode()
-
-    page_bg_img = f"""
-    <style>
-    [data-testid="stApp"] {{
-      background-image: url("data:image/jpg;base64,{encoded}");
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-    }}
-    </style>
-    """
-    st.markdown(page_bg_img, unsafe_allow_html=True)
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
@@ -171,6 +155,45 @@ def calculate_numerology(name):
 
 
 st.title("📊 Numeroniq")
+
+st.html("""
+<style>
+[data-testid=stElementToolbarButton]:first-of-type {
+    display: none;
+}
+</style>
+""")
+
+st.markdown("""
+    <style>
+    /* Disable text selection */
+    .no-select * {
+        -webkit-user-select: none; /* Safari */
+        -moz-user-select: none;    /* Firefox */
+        -ms-user-select: none;     /* Internet Explorer/Edge */
+        user-select: none;         /* Standard */
+    }
+
+    /* Optional: disable right-click */
+    .no-select {
+        pointer-events: auto;
+    }
+
+    .no-select::selection {
+        background: none;
+    }
+
+    body {
+        -webkit-touch-callout: none; /* Disable callout, iOS Safari */
+    }
+
+    /* Hide Streamlit's built-in context menu on long-press */
+    div[data-testid="stDataFrame"] {
+        pointer-events: none; /* Prevent interaction */
+    }
+    </style>
+""", unsafe_allow_html=True)
+
 
 # === Toggle between filtering methods ===
 filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
