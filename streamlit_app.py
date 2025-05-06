@@ -187,10 +187,7 @@ st.markdown("""
         -webkit-touch-callout: none; /* Disable callout, iOS Safari */
     }
 
-    /* Hide Streamlit's built-in context menu on long-press */
-    div[data-testid="stDataFrame"] {
-        pointer-events: none; /* Prevent interaction */
-    }
+    
     </style>
 """, unsafe_allow_html=True)
 
