@@ -6,7 +6,7 @@ import plotly.graph_objects as go
 from datetime import datetime
 
 # Set wide layout
-st.set_page_config(page_title="Stock Screener - IPO & Numerology", layout="wide")
+st.set_page_config(page_title="Numeroniq", layout="wide")
 
 # Load stock data
 @st.cache_data
@@ -152,10 +152,10 @@ def calculate_numerology(name):
 
 
 
-st.title("📊 Stock Screener - IPO & Numerology Insight")
+st.title("📊 Numeroniq")
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology (Company Name)", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -395,8 +395,8 @@ elif filter_mode == "Filter by Numerology":
     else:
         st.info("No companies found with matching numerology dates.")
 
-elif filter_mode == "Name Numerology (Company Name)":
-    st.subheader("🔢 Chaldean Name Numerology for Company Names")
+elif filter_mode == "Name Numerology":
+    st.subheader("🔢 Name Numerology")
     
     use_ltd = st.radio(
         "For company names that contain 'Ltd' or 'Limited', include it in numerology calculation?",
