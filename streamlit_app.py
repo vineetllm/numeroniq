@@ -641,7 +641,10 @@ elif filter_mode == "Home":
             col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown(f"**DOC Zodiac Sign:** {row.get('DOC zodiac sign', 'N/A')}")
-                st.markdown(f"**DOC Zodiac Number:** {row.get('DOC zodiac number', 'N/A')}")
+                doc_zodiac_number = row.get('DOC zodiac number', 'N/A')
+                if isinstance(doc_zodiac_number, float) and doc_zodiac_number.is_integer():
+                    doc_zodiac_number = int(doc_zodiac_number)
+                st.markdown(f"**DOC Zodiac Number:** {doc_zodiac_number}")
 
             with col2:
                 st.markdown(f"**NSE Zodiac Sign:** {row.get('NSE zodiac sign', 'N/A')}")
