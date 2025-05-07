@@ -164,34 +164,6 @@ st.html("""
 </style>
 """)
 
-st.markdown("""
-    <style>
-    /* Disable text selection */
-    .no-select * {
-        -webkit-user-select: none; /* Safari */
-        -moz-user-select: none;    /* Firefox */
-        -ms-user-select: none;     /* Internet Explorer/Edge */
-        user-select: none;         /* Standard */
-    }
-
-    /* Optional: disable right-click */
-    .no-select {
-        pointer-events: auto;
-    }
-
-    .no-select::selection {
-        background: none;
-    }
-
-    body {
-        -webkit-touch-callout: none; /* Disable callout, iOS Safari */
-    }
-
-    
-    </style>
-""", unsafe_allow_html=True)
-
-
 # === Toggle between filtering methods ===
 filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
 
