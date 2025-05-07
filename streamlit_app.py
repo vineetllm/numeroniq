@@ -220,7 +220,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -624,7 +624,7 @@ elif filter_mode == "Name Numerology":
     # === Display Filtered Table ===
     st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
-elif filter_mode == "Home":
+elif filter_mode == "Company Overview":
     st.title("🏠 Company Overview")
 
     # Prepare searchable list for suggestions
@@ -761,35 +761,43 @@ elif filter_mode == "Home":
             # Step 1: Ask user for date type preference
             date_match_option = st.selectbox(
                 "Select Date Type to View Numerology Data:",
-                ["NSE LISTING DATE", "BSE LISTING DATE", "DATE OF INCORPORATION"]
+                ["NSE LISTING DATE", "BSE LISTING DATE", "DATE OF INCORPORATION", "All Dates"]
             )
 
             selected_row = row  # Already fetched from earlier using user_input
 
-            # Step 3: Get numerology data based on the selected date type
-            match_date = selected_row.get(date_match_option)
+            date_types = (
+                ["NSE LISTING DATE", "BSE LISTING DATE", "DATE OF INCORPORATION"]
+                if date_match_option == "All Dates"
+                else [date_match_option]
+            )
 
-            # Step 4: Filter numerology data to match selected date
-            numerology_match = numerology_df[numerology_df['date'] == match_date]
+            for dt_type in date_types:
+                match_date = selected_row.get(dt_type)
+                st.markdown(f"#### 📅 Numerology for {dt_type}: {match_date.date() if pd.notnull(match_date) else 'N/A'}")
 
+                if pd.notnull(match_date):
+                    match_date = pd.to_datetime(match_date)
+                    numerology_row = numerology_df[numerology_df['date'] == match_date]
+                    if not numerology_row.empty:
+                        row_data = numerology_row.iloc[0]
 
-            if not numerology_match.empty:
-                numerology_row = numerology_match.iloc[0]
-    
-                col1, col2, col3, col4, col5 = st.columns(5)
-
-                with col1:
-                    st.markdown(f"**BN:** {numerology_row.get('BN', 'N/A')}")
-                with col2:
-                    st.markdown(f"**DN (Formatted):** {numerology_row.get('DN (Formatted)', 'N/A')}")
-                with col3:
-                    st.markdown(f"**SN:** {numerology_row.get('SN', 'N/A')}")
-                with col4:
-                    st.markdown(f"**HP:** {numerology_row.get('HP', 'N/A')}")
-                with col5:
-                    st.markdown(f"**Day Number:** {numerology_row.get('Day Number', 'N/A')}")
+                        col1, col2, col3, col4, col5 = st.columns(5)
+                        with col1:
+                            st.markdown(f"**BN:** {row_data.get('BN', 'N/A')}")
+                        with col2:
+                            st.markdown(f"**DN (Formatted):** {row_data.get('DN (Formatted)', 'N/A')}")
+                        with col3:
+                            st.markdown(f"**SN:** {row_data.get('SN', 'N/A')}")
+                        with col4:
+                            st.markdown(f"**HP:** {row_data.get('HP', 'N/A')}")
+                        with col5:
+                            st.markdown(f"**Day Number:** {row_data.get('Day Number', 'N/A')}")
+                else:
+                    st.info(f"No numerology data available for {dt_type}.")
             else:
-                st.info("Numerology data not available for this date.")
+                st.info(f"No date available for {dt_type}.")
+
 
 
             # --- Candlestick Chart (After Zodiac Info) ---
