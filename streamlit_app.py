@@ -125,6 +125,7 @@ def calculate_pythagorean_numerology(name):
 def get_word_value(word):
     return sum(char_to_num.get(char.upper(), 0) for char in word)
 
+
 def reduce_to_single_digit(n):
     while n > 9:
         n = sum(int(d) for d in str(n))
@@ -152,6 +153,48 @@ def calculate_numerology(name):
     equation = f"{' + '.join(word_parts)} = {total_sum}({final_reduced})"
     return final_reduced, equation
 
+def calculate_chaldean_isin_numerology(isin):
+    """
+    Calculates Chaldean numerology for ISIN.
+    Returns total and reduced value in format: 34(7)
+    """
+    if not isin:
+        return None, None
+
+    total = 0
+    for char in isin:
+        if char.isdigit():
+            total += int(char)
+        elif char.upper() in char_to_num:
+            total += char_to_num[char.upper()]
+
+    if total == 0:
+        return None, None
+
+    reduced = reduce_to_single_digit(total)
+    return reduced, f"{total}({reduced})"
+
+def calculate_pythagorean_isin_numerology(isin):
+    """
+    Calculates Pythagorean numerology for ISIN.
+    Returns total and reduced value in format: 34(7)
+    """
+    if not isin:
+        return None, None
+
+    total = 0
+    for char in isin:
+        if char.isdigit():
+            total += int(char)
+        elif char.upper() in pythagorean_char_to_num:
+            total += pythagorean_char_to_num[char.upper()]
+
+    if total == 0:
+        return None, None
+
+    reduced = reduce_to_single_digit(total)
+    return reduced, f"{total}({reduced})"
+
 
 
 st.title("📊 Numeroniq")
@@ -163,6 +206,18 @@ st.html("""
 }
 </style>
 """)
+
+# Inject JavaScript to hijack clipboard copy events
+st.markdown("""
+    <script>
+    document.addEventListener('copy', function(e) {
+        // Replace clipboard data with fake/encrypted text
+        const fakeText = "⚠️ Copying is not allowed. This content is protected.";
+        e.clipboardData.setData('text/plain', fakeText);
+        e.preventDefault(); // Stop normal copy
+    });
+    </script>
+    """, unsafe_allow_html=True)
 
 # === Toggle between filtering methods ===
 filter_mode = st.radio("Choose Filter Mode:", ["Home", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
@@ -317,6 +372,7 @@ elif filter_mode == "Filter by Numerology":
     filtered_numerology['DN'] = dn_values.apply(lambda x: x[1])
     filtered_numerology['DN (Formatted)'] = filtered_numerology.apply(lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None, axis=1)
 
+
     # Prepare layout
     col1, col2, col3, col4, col5 = st.columns(5)
 
@@ -400,7 +456,7 @@ elif filter_mode == "Filter by Numerology":
             [col for col in matching_stocks.columns if col not in ['Symbol', 'Matching Date Source', date_match_option, 'BN', 'DN', 'DN (Formatted)', 'SN', 'HP', 'Day Number']]
 
 
-        st.dataframe(matching_stocks[cols_order], use_container_width=True)
+        st.dataframe(matching_stocks[cols_order], use_container_width=True, hide_index=True)
 
     else:
         st.info("No companies found with matching numerology dates.")
@@ -408,22 +464,35 @@ elif filter_mode == "Filter by Numerology":
 elif filter_mode == "Name Numerology":
     st.subheader("🔢 Name Numerology")
     
-    use_ltd = st.radio(
-        "For company names that contain 'Ltd' or 'Limited', include it in numerology calculation?",
-        ["Yes", "No"],
-        index=1
-    )
+    col1, col2, col3 = st.columns(3)
 
-    numerology_system = st.radio(
-        "Select Numerology System:",
-        ["Chaldean", "Pythagoras", "Both"]
-    )
+    with col1:
+        use_ltd = st.radio(
+            "Include 'Ltd' or 'Limited'?",
+            ["Yes", "No"],
+            index=1
+        )
+
+    with col2:
+        use_is_prefix = st.radio(
+            "Include 'IN' prefix in ISIN numerology?",
+            ["Yes", "No"],
+            index=0
+        )
+
+    with col3:
+        numerology_system = st.radio(
+            "Numerology System:",
+           ["Chaldean", "Pythagoras", "Both"]
+        )
+
 
     numerology_data = []
 
     for _, row in stock_df.iterrows():
         company_original = row['Company Name']
         symbol = str(row['Symbol'])
+        isin_code = str(row['ISIN Code']) 
 
         # Remove 'Ltd' or 'Limited' if user chose "No"
         if use_ltd == "No":
@@ -434,24 +503,34 @@ elif filter_mode == "Name Numerology":
         entry = {
             'Symbol': row['Symbol'],
             'Company Name': company_original,
+            'ISIN Code': isin_code,  # Add ISIN code for display
         }
 
         if numerology_system in ["Chaldean", "Both"]:
             ch_company_num, ch_company_eq = calculate_numerology(company_clean)
             ch_symbol_num, ch_symbol_eq = calculate_numerology(symbol)
+            isin_to_use = isin_code if use_is_prefix == "Yes" else isin_code[2:]
+            ch_isin_num, ch_isin_eq = calculate_chaldean_isin_numerology(isin_to_use)
+
+
             entry['Chaldean Eqn (Company Name)'] = ch_company_eq
             entry['Chaldean Eqn (Symbol)'] = ch_symbol_eq
+            entry['Chaldean Eqn (ISIN Code)'] = ch_isin_eq
 
         if numerology_system in ["Pythagoras", "Both"]:
             py_company_num, py_company_eq = calculate_pythagorean_numerology(company_clean)
             py_symbol_num, py_symbol_eq = calculate_pythagorean_numerology(symbol)
+            isin_to_use = isin_code if use_is_prefix == "Yes" else isin_code[2:]
+            py_isin_num, py_isin_eq = calculate_pythagorean_isin_numerology(isin_to_use) 
             entry['Pythagoras Eqn (Company Name)'] = py_company_eq
             entry['Pythagoras Eqn (Symbol)'] = py_symbol_eq
+            entry['Pythagoras Eqn (ISIN Code)'] = py_isin_eq 
 
         numerology_data.append(entry)
 
 
     numerology_df_display = pd.DataFrame(numerology_data)
+
 
     # === Filters ===
     col1, col2 = st.columns(2)
@@ -469,7 +548,7 @@ elif filter_mode == "Name Numerology":
         filtered_df = filtered_df[filtered_df['Company Name'] == company_filter]
 
     if numerology_system in ["Chaldean", "Both"]:
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             ch_company_totals = numerology_df_display['Chaldean Eqn (Company Name)'].dropna().apply(
@@ -483,6 +562,12 @@ elif filter_mode == "Name Numerology":
             )
             selected_ch_symbol = st.selectbox("Chaldean Total (Symbol)", ["All"] + sorted(ch_symbol_totals.dropna().unique()))
 
+        with col3:
+            ch_isin_totals = numerology_df_display['Chaldean Eqn (ISIN Code)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_ch_isin = st.selectbox("Chaldean Total (ISIN Code)", ["All"] + sorted(ch_isin_totals.dropna().unique()))
+
         if selected_ch_company != "All":
             filtered_df = filtered_df[
                 filtered_df['Chaldean Eqn (Company Name)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_ch_company)
@@ -493,8 +578,13 @@ elif filter_mode == "Name Numerology":
                 filtered_df['Chaldean Eqn (Symbol)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_ch_symbol)
             ]
 
+        if selected_ch_isin != "All":
+            filtered_df = filtered_df[
+                filtered_df['Chaldean Eqn (ISIN Code)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_ch_isin)
+            ]
+
     if numerology_system in ["Pythagoras", "Both"]:
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
 
         with col1:
             py_company_totals = numerology_df_display['Pythagoras Eqn (Company Name)'].dropna().apply(
@@ -508,6 +598,13 @@ elif filter_mode == "Name Numerology":
             )
             selected_py_symbol = st.selectbox("Pythagoras Total (Symbol)", ["All"] + sorted(py_symbol_totals.dropna().unique()))
 
+        with col2:
+            py_isin_totals = numerology_df_display['Pythagoras Eqn (ISIN Code)'].dropna().apply(
+                lambda eq: int(re.search(r'=\s*(\d+)\(', eq).group(1)) if re.search(r'=\s*(\d+)\(', eq) else None
+            )
+            selected_py_isin = st.selectbox("Pythagoras Total (ISIN Code)", ["All"] + sorted(py_isin_totals.dropna().unique()))
+
+
         if selected_py_company != "All":
             filtered_df = filtered_df[
                 filtered_df['Pythagoras Eqn (Company Name)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_py_company)
@@ -518,12 +615,17 @@ elif filter_mode == "Name Numerology":
                 filtered_df['Pythagoras Eqn (Symbol)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_py_symbol)
             ]
 
+        if selected_py_isin != "All":
+            filtered_df = filtered_df[
+                filtered_df['Pythagoras Eqn (ISIN Code)'].str.extract(r'=\s*(\d+)\(')[0].astype(float) == float(selected_py_isin)
+            ]
+
 
     # === Display Filtered Table ===
-    st.dataframe(filtered_df, use_container_width=True)
+    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
 
 elif filter_mode == "Home":
-    st.title("🏠 Company Snapshot")
+    st.title("🏠 Company Overview")
 
     # Prepare searchable list for suggestions
     search_options = stock_df['Symbol'].dropna().tolist() + stock_df['Company Name'].dropna().tolist()
@@ -578,31 +680,50 @@ elif filter_mode == "Home":
                 key="home_ltd"
             )
 
+            use_in_prefix_home = st.radio(
+                "Include 'IN' prefix in ISIN code (if present)?",
+                ["Yes", "No"],
+                index=0,
+                key="home_isin"
+            )
+
+            isin_code = str(row.get("ISIN Code", ""))
+
             company_name_original = str(row['Company Name'])
             symbol_name = str(row['Symbol'])
+            isin_code = str(row['ISIN Code'])
 
             if use_ltd_home == "No":
                 company_clean = re.sub(r'\b(Ltd|Limited)\b', '', company_name_original, flags=re.IGNORECASE).strip()
             else:
                 company_clean = company_name_original
 
+            if use_in_prefix_home == "Yes":
+                isin_to_use = isin_code
+            else:
+                isin_to_use = isin_code[2:] if isin_code.startswith("IN") else isin_code
+
             # Chaldean system
             ch_company_num, ch_company_eq = calculate_numerology(company_clean)
             ch_symbol_num, ch_symbol_eq = calculate_numerology(symbol_name)
+            ch_isin_num, ch_isin_eq = calculate_chaldean_isin_numerology(isin_to_use)
 
             # Pythagorean system
             py_company_num, py_company_eq = calculate_pythagorean_numerology(company_clean)
             py_symbol_num, py_symbol_eq = calculate_pythagorean_numerology(symbol_name)
+            py_isin_num, py_isin_eq = calculate_pythagorean_isin_numerology(isin_to_use)
 
-            # Display equations side by side
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 st.markdown(f"**Chaldean Eqn (Company Name):** {ch_company_eq}")
                 st.markdown(f"**Chaldean Eqn (Symbol):** {ch_symbol_eq}")
+                st.markdown(f"**Chaldean Eqn (ISIN Code):** {ch_isin_eq}")
 
             with col2:
                 st.markdown(f"**Pythagoras Eqn (Company Name):** {py_company_eq}")
                 st.markdown(f"**Pythagoras Eqn (Symbol):** {py_symbol_eq}")
+                st.markdown(f"**Pythagoras Eqn (ISIN Code):** {py_isin_eq}")
+
 
             # --- Line 5: Zodiac Signs ---
             st.markdown("### ♈ Zodiac Information (Based on Dates)")
@@ -615,6 +736,7 @@ elif filter_mode == "Home":
                     doc_zodiac_number = int(doc_zodiac_number)
                 st.markdown(f"**DOC Zodiac Number:** {doc_zodiac_number}")
 
+
             with col2:
                 st.markdown(f"**NSE Zodiac Sign:** {row.get('NSE zodiac sign', 'N/A')}")
                 st.markdown(f"**NSE Zodiac Number:** {row.get('NSE zodiac number', 'N/A')}")
@@ -622,6 +744,53 @@ elif filter_mode == "Home":
             with col3:
                 st.markdown(f"**BSE Zodiac Sign:** {row.get('BSE zodiac sign', 'N/A')}")
                 st.markdown(f"**BSE Zodiac Number:** {row.get('BSE zodiac number', 'N/A')}")
+
+            # --- Numerology Selection for Home Page ---
+            st.markdown("### 🔢 Numerology Data Based on Selected Date")
+
+            if 'DN (Formatted)' not in numerology_df.columns:
+                dn_values = numerology_df['date'].apply(calculate_destiny_number)
+                numerology_df['DN Raw'] = dn_values.apply(lambda x: x[0])
+                numerology_df['DN'] = dn_values.apply(lambda x: x[1])
+                numerology_df['DN (Formatted)'] = numerology_df.apply(
+                    lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None,
+                axis=1
+            )
+
+
+            # Step 1: Ask user for date type preference
+            date_match_option = st.selectbox(
+                "Select Date Type to View Numerology Data:",
+                ["NSE LISTING DATE", "BSE LISTING DATE", "DATE OF INCORPORATION"]
+            )
+
+            selected_row = row  # Already fetched from earlier using user_input
+
+            # Step 3: Get numerology data based on the selected date type
+            match_date = selected_row.get(date_match_option)
+
+            # Step 4: Filter numerology data to match selected date
+            numerology_match = numerology_df[numerology_df['date'] == match_date]
+
+
+            if not numerology_match.empty:
+                numerology_row = numerology_match.iloc[0]
+    
+                col1, col2, col3, col4, col5 = st.columns(5)
+
+                with col1:
+                    st.markdown(f"**BN:** {numerology_row.get('BN', 'N/A')}")
+                with col2:
+                    st.markdown(f"**DN (Formatted):** {numerology_row.get('DN (Formatted)', 'N/A')}")
+                with col3:
+                    st.markdown(f"**SN:** {numerology_row.get('SN', 'N/A')}")
+                with col4:
+                    st.markdown(f"**HP:** {numerology_row.get('HP', 'N/A')}")
+                with col5:
+                    st.markdown(f"**Day Number:** {numerology_row.get('Day Number', 'N/A')}")
+            else:
+                st.info("Numerology data not available for this date.")
+
 
             # --- Candlestick Chart (After Zodiac Info) ---
             st.markdown("### 📈 Stock Price Candlestick Chart")
