@@ -477,7 +477,7 @@ elif filter_mode == "Name Numerology":
         use_is_prefix = st.radio(
             "Include 'IN' prefix in ISIN numerology?",
             ["Yes", "No"],
-            index=0
+            index=1
         )
 
     with col3:
