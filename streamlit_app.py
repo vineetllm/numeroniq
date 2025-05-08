@@ -10,6 +10,20 @@ import base64
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
 
+st.markdown("""
+    <style>
+        .stApp {
+            background: radial-gradient(circle at top left, #e6cbb6, #fde6ef, #dcf7fc, #c2f0f7);
+        }
+        .block-container {
+            background: radial-gradient(circle at top left, #e6cbb6, #fde6ef, #dcf7fc, #c2f0f7);
+            padding: 2rem;
+            border-radius: 10px;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 # Load stock data
 @st.cache_data
 def load_stock_data():
