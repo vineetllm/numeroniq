@@ -285,7 +285,7 @@ if filter_mode == "Filter by Sector/Symbol":
         for col in ['NSE LISTING DATE', 'BSE LISTING DATE', 'DATE OF INCORPORATION']:
             if col in display_cols.columns:
                 display_cols[col] = display_cols[col].dt.strftime('%Y-%m-%d')
-        st.dataframe(display_cols, use_container_width=True, selection_mode='single-row')
+        st.table(display_cols)
 
         # Date choice: Single date or All Dates (NSE, BSE, Incorporation)
         date_choice = st.radio("Select Listing Date Source for Numerology:", 
