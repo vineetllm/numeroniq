@@ -6,9 +6,43 @@ import plotly.graph_objects as go
 from datetime import datetime
 import base64
 
-
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
+
+# Inject CSS and JS to disable text selection and right-click
+st.markdown("""
+    <style>
+    * {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+
+    /* Specifically target tables */
+    div[data-testid="stTable"] {
+        -webkit-user-select: none !important;
+        -moz-user-select: none !important;
+        -ms-user-select: none !important;
+        user-select: none !important;
+    }
+
+    /* Also target the scrollable dataframe area */
+    .css-1wmy9hl, .css-1xarl3l {
+        user-select: none !important;
+    }
+    </style>
+
+    <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    </script>
+    """, unsafe_allow_html=True)
+# Disable right click with JavaScript
+st.markdown("""
+    <script>
+    document.addEventListener('contextmenu', event => event.preventDefault());
+    </script>
+    """, unsafe_allow_html=True)
 
 st.markdown("""
     <style>
@@ -22,6 +56,7 @@ st.markdown("""
         }
     </style>
 """, unsafe_allow_html=True)
+
 
 
 # Load stock data
@@ -221,18 +256,6 @@ st.html("""
 </style>
 """)
 
-# Inject JavaScript to hijack clipboard copy events
-st.markdown("""
-    <script>
-    document.addEventListener('copy', function(e) {
-        // Replace clipboard data with fake/encrypted text
-        const fakeText = "⚠️ Copying is not allowed. This content is protected.";
-        e.clipboardData.setData('text/plain', fakeText);
-        e.preventDefault(); // Stop normal copy
-    });
-    </script>
-    """, unsafe_allow_html=True)
-
 # === Toggle between filtering methods ===
 filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
 
@@ -262,7 +285,7 @@ if filter_mode == "Filter by Sector/Symbol":
         for col in ['NSE LISTING DATE', 'BSE LISTING DATE', 'DATE OF INCORPORATION']:
             if col in display_cols.columns:
                 display_cols[col] = display_cols[col].dt.strftime('%Y-%m-%d')
-        st.dataframe(display_cols, use_container_width=True)
+        st.dataframe(display_cols, use_container_width=True, selection_mode='single-row')
 
         # Date choice: Single date or All Dates (NSE, BSE, Incorporation)
         date_choice = st.radio("Select Listing Date Source for Numerology:", 
@@ -294,7 +317,7 @@ if filter_mode == "Filter by Sector/Symbol":
                 cols = ['Symbol', 'Date Type', 'NSE age', 'BSE age', 'DOC age'] + [col for col in all_numerology_df.columns if col not in ['Symbol', 'Date Type', 'NSE age', 'BSE age', 'DOC age']]
                 all_numerology_df = all_numerology_df[cols]
 
-                st.dataframe(all_numerology_df, use_container_width=True, hide_index=True)
+                st.dataframe(all_numerology_df, use_container_width=True, hide_index=True, selection_mode='single-row')
             else:
                 st.warning("No numerology data found for selected dates across these companies.")
         
@@ -317,7 +340,7 @@ if filter_mode == "Filter by Sector/Symbol":
                         elif date_choice == "DATE OF INCORPORATION":
                             matched_numerology['DOC age'] = company_data['DOC age'].values[0]
                             
-                        st.dataframe(matched_numerology, use_container_width=True)
+                        st.table(matched_numerology)
                     else:
                         st.warning("No numerology data found for this date.")
                 else:
@@ -359,7 +382,7 @@ if filter_mode == "Filter by Sector/Symbol":
                         cols_to_front.append('DOC age')
 
                     all_cols = cols_to_front + [col for col in all_numerology_df.columns if col not in cols_to_front]
-                    st.dataframe(all_numerology_df[all_cols], use_container_width=True, hide_index=True)
+                    st.table(all_numerology_df[all_cols])
                 else:
                     st.warning("No numerology data found for selected date field across these companies.")
 
@@ -470,7 +493,7 @@ elif filter_mode == "Filter by Numerology":
             [col for col in matching_stocks.columns if col not in ['Symbol', 'Matching Date Source', date_match_option, 'BN', 'DN', 'DN (Formatted)', 'SN', 'HP', 'Day Number']]
 
 
-        st.dataframe(matching_stocks[cols_order], use_container_width=True, hide_index=True)
+        st.table(matching_stocks[cols_order])
 
     else:
         st.info("No companies found with matching numerology dates.")
@@ -491,7 +514,7 @@ elif filter_mode == "Name Numerology":
         use_is_prefix = st.radio(
             "Include 'IN' prefix in ISIN numerology?",
             ["Yes", "No"],
-            index=1
+            index=0
         )
 
     with col3:
@@ -636,7 +659,7 @@ elif filter_mode == "Name Numerology":
 
 
     # === Display Filtered Table ===
-    st.dataframe(filtered_df, use_container_width=True, hide_index=True)
+    st.table(filtered_df)
 
 elif filter_mode == "Company Overview":
     st.title("🏠 Company Overview")
@@ -697,7 +720,7 @@ elif filter_mode == "Company Overview":
             use_in_prefix_home = st.radio(
                 "Include 'IN' prefix in ISIN code (if present)?",
                 ["Yes", "No"],
-                index=1,
+                index=0,
                 key="home_isin"
             )
 
@@ -968,7 +991,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     ]
     
     # Display reordered table
-    st.dataframe(filtered_merged_reset[existing_cols], use_container_width=True, hide_index=True)
+    st.table(filtered_merged_reset[existing_cols])
 
 
 
