@@ -956,6 +956,27 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     reordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close']
     full_data = full_data[reordered_cols]
 
+    # Default date range: last 90 days
+    default_end_date = full_data.index.max()
+    default_start_date = default_end_date - timedelta(days=90)
+
+    # Let user choose range
+    start_date = st.date_input("Start Date", value=default_start_date)
+    end_date = st.date_input("End Date", value=default_end_date)
+
+    # Ensure end_date is not earlier than start_date
+    if start_date > end_date:
+        st.error("End Date must be after Start Date")
+    else:
+        # Convert to datetime and filter
+        start_dt = pd.to_datetime(start_date)
+        end_dt = pd.to_datetime(end_date)
+
+        full_data = full_data.loc[(full_data.index >= start_dt) & (full_data.index <= end_dt)]
+        full_data = full_data.sort_index(ascending=False)
+
+
+
     # Filters in horizontal layout
     st.markdown("### 🔍 Filter OHLC Table")
     col1, col2, col3 = st.columns(3)
