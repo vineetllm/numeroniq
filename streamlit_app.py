@@ -57,7 +57,29 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# Define custom CSS for the table background
+custom_css = """
+<style>
+.scroll-table {
+    overflow-x: auto;
+    max-height: 500px;
+    border: 1px solid #ccc;
+}
 
+.scroll-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #f0f8ff; /* Light blue background */
+}
+
+.scroll-table th, .scroll-table td {
+    padding: 8px;
+    border: 1px solid #ddd;
+    text-align: left;
+}
+</style>
+"""
+st.markdown(custom_css, unsafe_allow_html=True)
 
 # Load stock data
 @st.cache_data
@@ -73,6 +95,7 @@ def load_stock_data():
 def load_numerology_data():
     df = pd.read_excel("numerology.xlsx")
     df['date'] = pd.to_datetime(df['date'], dayfirst=True, errors='coerce')
+    
     return df
 
 def calculate_destiny_number(date_obj):
@@ -285,7 +308,11 @@ if filter_mode == "Filter by Sector/Symbol":
         for col in ['NSE LISTING DATE', 'BSE LISTING DATE', 'DATE OF INCORPORATION']:
             if col in display_cols.columns:
                 display_cols[col] = display_cols[col].dt.strftime('%Y-%m-%d')
-        st.table(display_cols)
+        # Convert DataFrame to HTML table
+        html_table = display_cols.to_html(index=False, escape=False)
+
+        # Embed HTML table in a scrollable container
+        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
         # Date choice: Single date or All Dates (NSE, BSE, Incorporation)
         date_choice = st.radio("Select Listing Date Source for Numerology:", 
@@ -317,7 +344,12 @@ if filter_mode == "Filter by Sector/Symbol":
                 cols = ['Symbol', 'Date Type', 'NSE age', 'BSE age', 'DOC age'] + [col for col in all_numerology_df.columns if col not in ['Symbol', 'Date Type', 'NSE age', 'BSE age', 'DOC age']]
                 all_numerology_df = all_numerology_df[cols]
 
-                st.dataframe(all_numerology_df, use_container_width=True, hide_index=True, selection_mode='single-row')
+                # Convert DataFrame to HTML table
+                html_table = all_numerology_df.to_html(index=False, escape=False)
+
+                # Embed HTML table in a scrollable container
+                st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
             else:
                 st.warning("No numerology data found for selected dates across these companies.")
         
@@ -340,7 +372,11 @@ if filter_mode == "Filter by Sector/Symbol":
                         elif date_choice == "DATE OF INCORPORATION":
                             matched_numerology['DOC age'] = company_data['DOC age'].values[0]
                             
-                        st.table(matched_numerology)
+                        # Convert DataFrame to HTML table
+                        html_table = matched_numerology.to_html(index=False, escape=False)
+
+                        # Embed HTML table in a scrollable container
+                        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
                     else:
                         st.warning("No numerology data found for this date.")
                 else:
@@ -382,7 +418,13 @@ if filter_mode == "Filter by Sector/Symbol":
                         cols_to_front.append('DOC age')
 
                     all_cols = cols_to_front + [col for col in all_numerology_df.columns if col not in cols_to_front]
-                    st.table(all_numerology_df[all_cols])
+                    
+                    # Convert DataFrame to HTML table
+                    html_table = all_numerology_df[all_cols].to_html(index=False, escape=False)
+
+                    # Embed HTML table in a scrollable container
+                    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
                 else:
                     st.warning("No numerology data found for selected date field across these companies.")
 
@@ -493,7 +535,11 @@ elif filter_mode == "Filter by Numerology":
             [col for col in matching_stocks.columns if col not in ['Symbol', 'Matching Date Source', date_match_option, 'BN', 'DN', 'DN (Formatted)', 'SN', 'HP', 'Day Number']]
 
 
-        st.table(matching_stocks[cols_order])
+        # Convert DataFrame to HTML table
+        html_table = matching_stocks.to_html(index=False, escape=False)
+
+        # Embed HTML table in a scrollable container
+        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
     else:
         st.info("No companies found with matching numerology dates.")
@@ -658,8 +704,12 @@ elif filter_mode == "Name Numerology":
             ]
 
 
-    # === Display Filtered Table ===
-    st.table(filtered_df)
+    
+    # Convert DataFrame to HTML table
+    html_table = filtered_df.to_html(index=False, escape=False)
+
+    # Embed HTML table in a scrollable container
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 elif filter_mode == "Company Overview":
     st.title("🏠 Company Overview")
@@ -926,12 +976,25 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if close_op != "All":
         filtered_data = filtered_data.query(f"`Close %` {close_op} @close_val")
 
-        # Merge numerology data with OHLC data on date
+    # Ensure DN columns exist
+    if 'DN' not in numerology_df.columns:
+        dn_values = numerology_df['date'].apply(calculate_destiny_number)
+        numerology_df['DN Raw'] = dn_values.apply(lambda x: x[0])
+        numerology_df['DN'] = dn_values.apply(lambda x: x[1])
+        numerology_df['DN (Formatted)'] = numerology_df.apply(
+            lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None,
+            axis=1
+        )
+
+
+    # Merge numerology data with OHLC data on date
     numerology_aligned = numerology_df.copy()
     numerology_aligned = numerology_aligned.set_index('date')
     numerology_aligned.index = pd.to_datetime(numerology_aligned.index)
     
     full_data_merged = filtered_data.merge(numerology_aligned, left_index=True, right_index=True, how='left')
+
+
 
     # Numerology filters
     st.markdown("### 🧮 Numerology Filters")
@@ -941,7 +1004,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         bn_filter = st.selectbox("BN", ["All"] + sorted(numerology_df['BN'].dropna().unique()))
 
     with ncol2:
-        dn_filter = st.selectbox("DN", ["All"] + sorted(numerology_df['DN'].dropna().unique()))
+        dn_filter = st.selectbox("DN (Formatted)", ["All"] + sorted(numerology_df['DN (Formatted)'].dropna().unique()))
 
     with ncol3:
         sn_filter = st.selectbox("SN", ["All"] + sorted(numerology_df['SN'].dropna().unique()))
@@ -957,7 +1020,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     if bn_filter != "All":
         filtered_merged = filtered_merged[filtered_merged['BN'] == bn_filter]
     if dn_filter != "All":
-        filtered_merged = filtered_merged[filtered_merged['DN'] == dn_filter]
+        filtered_merged = filtered_merged[filtered_merged['DN (Formatted)'] == dn_filter]
     if sn_filter != "All":
         filtered_merged = filtered_merged[filtered_merged['SN'] == sn_filter]
     if hp_filter != "All":
@@ -969,7 +1032,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     st.markdown("### 🔢 OHLC + Numerology Alignment")
     # Reorder columns
     ordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close']
-    numerology_cols = ['BN', 'DN', 'SN', 'HP', 'Day Number', 'BN Planet','DN Planet', 'SN Planet', 'HP Planet', 'Day Number Planet']
+    numerology_cols = ['BN', 'DN (Formatted)', 'SN', 'HP', 'Day Number', 'BN Planet','DN Planet', 'SN Planet', 'HP Planet', 'Day Number Planet']
     # Include date as a column if it's not already (currently index)
     filtered_merged_reset = filtered_merged.reset_index()
 
@@ -980,7 +1043,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     # Desired column order (adjust as needed if columns vary)
     desired_order = [
         'Date',
-        'BN', 'DN', 
+        'BN', 'DN (Formatted)', 
         'SN', 'HP', 
         'Day Number', 'BN Planet',
         'DN Planet',  'SN Planet',
@@ -989,11 +1052,12 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         'Open', 'High',
         'Low', 'Close'
     ]
+    # Convert DataFrame to HTML table
+    html_table = filtered_merged_reset[existing_cols].to_html(index=False, escape=False)
+
+    # Embed HTML table in a scrollable container
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
     
-    # Display reordered table
-    st.table(filtered_merged_reset[existing_cols])
-
-
 
     if st.checkbox("📊 Show Closing Price Chart"):
         st.line_chart(filtered_data['Close'])
