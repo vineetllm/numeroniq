@@ -1081,8 +1081,35 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
     
 
-    if st.checkbox("📊 Show Closing Price Chart"):
-        st.line_chart(filtered_data['Close'])
+    if st.checkbox("📊 Show Candlestick Chart"):
+        if not filtered_data.empty:
+            candlestick = go.Figure(data=[go.Candlestick(
+                x=filtered_data.index,
+                open=filtered_data['Open'],
+                high=filtered_data['High'],
+                low=filtered_data['Low'],
+                close=filtered_data['Close'],
+                increasing_line_color='green',
+                decreasing_line_color='red'
+            )])
+
+            candlestick.update_layout(
+                title='Candlestick Chart',
+                xaxis_title='Date',
+                yaxis_title='Price',
+                xaxis_rangeslider_visible=False,
+                height=600
+            )
+
+            st.plotly_chart(candlestick, use_container_width=True)
+        else:
+            st.warning("No data available for selected filters to display candlestick chart.")
+    
+
+
+
+
+
     
 
 
