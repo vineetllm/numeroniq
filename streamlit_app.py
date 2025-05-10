@@ -5,6 +5,7 @@ import re
 import plotly.graph_objects as go
 from datetime import datetime
 import base64
+from datetime import timedelta
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
