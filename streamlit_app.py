@@ -771,7 +771,7 @@ elif filter_mode == "Company Overview":
             use_in_prefix_home = st.radio(
                 "Include 'IN' prefix in ISIN code (if present)?",
                 ["Yes", "No"],
-                index=0,
+                index=1,
                 key="home_isin"
             )
 
