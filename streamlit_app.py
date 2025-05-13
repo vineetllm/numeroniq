@@ -158,6 +158,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     
     return fig
 
+
 # Load data
 stock_df = load_stock_data()
 numerology_df = load_numerology_data()
@@ -1037,32 +1038,37 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         close_op = st.selectbox("Close % Operator", ["All", "<", "<=", ">", ">=", "=="])
         close_val = st.number_input("Close % Value", value=0.5, step=0.1)
 
-    st.markdown("### 📅 Filter by Day and Month")
-    dcol1, dcol2 = st.columns(2)
+    # Checkbox to enable/disable Day & Month filter
+    apply_day_month_filter = st.checkbox("🗓️ Filter by Day and Month", value=False)
 
-    with dcol1:
-        filter_day = st.number_input("Day (1-31)", min_value=1, max_value=31, value=1)
-
-    with dcol2:
-        filter_month = st.selectbox(
-            "Month",
-            options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
-            format_func=lambda x: datetime(1900, x, 1).strftime('%B')  
-        )
 
     filtered_data = full_data.copy()
 
     if vol_op != "All":
-        filtered_data = filtered_data.query(f"`Volatility %` {vol_op} @vol_val")
+        filtered_data = filtered_data.query(f"Volatility % {vol_op} @vol_val")
 
     if close_op != "All":
-        filtered_data = filtered_data.query(f"`Close %` {close_op} @close_val")
+        filtered_data = filtered_data.query(f"Close % {close_op} @close_val")
 
-    # ✅ Now apply Day & Month filter
-    filtered_data = filtered_data[
-        (filtered_data.index.day == filter_day) &
-        (filtered_data.index.month == filter_month)
-    ]
+    # Optional Day & Month filter
+    if apply_day_month_filter:
+        st.markdown("### 📅 Filter by Day and Month")
+        dcol1, dcol2 = st.columns(2)
+
+        with dcol1:
+            filter_day = st.number_input("Day (1-31)", min_value=1, max_value=31, value=1)
+
+        with dcol2:
+            filter_month = st.selectbox(
+                "Month",
+                options=list(range(1, 13)),
+                format_func=lambda x: datetime(1900, x, 1).strftime('%B')
+            )
+
+        filtered_data = filtered_data[
+            (filtered_data.index.day == filter_day) &
+            (filtered_data.index.month == filter_month)
+        ]
 
     # Ensure DN columns exist
     if 'DN' not in numerology_df.columns:
