@@ -962,8 +962,12 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     default_start_date = default_end_date - timedelta(days=90)
 
     # Let user choose range
-    start_date = st.date_input("Start Date", value=default_start_date)
-    end_date = st.date_input("End Date", value=default_end_date)
+    start_date = st.date_input("Start Date", value=default_start_date,
+                               min_value=full_data.index.min().date(), 
+                               max_value=full_data.index.max().date())
+    end_date = st.date_input("End Date", value=default_end_date,
+                             min_value=full_data.index.min().date(),
+                             max_value=full_data.index.max().date())
 
     # Ensure end_date is not earlier than start_date
     if start_date > end_date:
