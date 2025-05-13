@@ -4,8 +4,8 @@ import yfinance as yf
 import re
 import plotly.graph_objects as go
 from datetime import datetime
-import base64
 from datetime import timedelta
+import base64
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
@@ -953,6 +953,10 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     full_data['Volatility %'] = full_data['Volatility %'].round(2)
     full_data['Close %'] = full_data['Close %'].round(2)
 
+    full_data['Day'] = full_data.index.day
+    full_data['Month'] = full_data.index.month
+
+
     # Reorder columns: Volatility % and Close % first
     reordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close']
     full_data = full_data[reordered_cols]
@@ -994,6 +998,19 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         close_op = st.selectbox("Close % Operator", ["All", "<", "<=", ">", ">=", "=="])
         close_val = st.number_input("Close % Value", value=0.5, step=0.1)
 
+    st.markdown("### 📅 Filter by Day and Month")
+    dcol1, dcol2 = st.columns(2)
+
+    with dcol1:
+        filter_day = st.number_input("Day (1-31)", min_value=1, max_value=31, value=1)
+
+    with dcol2:
+        filter_month = st.selectbox(
+            "Month",
+            options=[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+            format_func=lambda x: datetime(1900, x, 1).strftime('%B')  
+        )
+
     filtered_data = full_data.copy()
 
     if vol_op != "All":
@@ -1001,6 +1018,12 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
 
     if close_op != "All":
         filtered_data = filtered_data.query(f"`Close %` {close_op} @close_val")
+
+    # ✅ Now apply Day & Month filter
+    filtered_data = filtered_data[
+        (filtered_data.index.day == filter_day) &
+        (filtered_data.index.month == filter_month)
+    ]
 
     # Ensure DN columns exist
     if 'DN' not in numerology_df.columns:
@@ -1108,12 +1131,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
             st.plotly_chart(candlestick, use_container_width=True)
         else:
             st.warning("No data available for selected filters to display candlestick chart.")
-    
-
-
-
-
-
     
 
 
