@@ -140,8 +140,8 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 if date_obj in stock_data.index:
                     fig.add_vline(
                         x=date_obj,
-                        line_width=1,
-                        line_dash="dash",
+                        line_width=2,
+                        line_dash="solid",
                         line_color="red",
                         annotation_text="SN",
                         annotation_position="top left"
