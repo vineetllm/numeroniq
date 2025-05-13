@@ -901,36 +901,6 @@ elif filter_mode == "Company Overview":
                 stock_data = get_stock_data(ticker, start_date, end_date)
                 if not stock_data.empty:
                     chart = plot_candlestick_chart(stock_data)
-
-                    # ➕ Add vertical lines based on SN
-                    sn_value = row_data.get("SN") if 'row_data' in locals() else None
-
-                    # Define SN date map
-                    sn_date_map = {
-                        1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
-                        2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
-                        3: ["2025-05-06", "2025-05-10", "2025-05-11"],
-                        4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
-                        5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
-                        6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
-                        7: ["2025-05-04", "2025-05-14"],
-                        8: ["2025-05-05", "2025-05-07", "2025-05-09"],
-                        9: ["2025-05-02", "2025-05-06", "2025-05-11"]
-                    }
-
-                    if sn_value in sn_date_map:
-                        highlight_dates = [pd.to_datetime(d) for d in sn_date_map[sn_value]]
-
-                        for date in highlight_dates:
-                            chart.add_vline(
-                                x=date,
-                                line_width=1,
-                                line_dash="dash",
-                                line_color="blue",
-                                annotation_text=date.strftime('%d-%b'),
-                                annotation_position="top left"
-                            )
-
                     st.plotly_chart(chart)
 
                 else:
