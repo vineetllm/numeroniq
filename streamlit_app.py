@@ -114,9 +114,13 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
-def plot_candlestick_chart(stock_data):
+import plotly.graph_objects as go
+import pandas as pd
+
+def plot_candlestick_chart(stock_data, vertical_lines=None):
     """
-    Generate and return a candlestick chart using Plotly.
+    Generate and return a candlestick chart using Plotly,
+    with optional vertical lines on specific dates.
     """
     fig = go.Figure(data=[go.Candlestick(
         x=stock_data.index,
@@ -127,6 +131,23 @@ def plot_candlestick_chart(stock_data):
         increasing_line_color='green',
         decreasing_line_color='red'
     )])
+    
+    # Add vertical lines if dates are provided
+    if vertical_lines:
+        for date_str in vertical_lines:
+            try:
+                date_obj = pd.to_datetime(date_str)
+                if date_obj in stock_data.index:
+                    fig.add_vline(
+                        x=date_obj,
+                        line_width=1,
+                        line_dash="dash",
+                        line_color="red",
+                        annotation_text="SN",
+                        annotation_position="top left"
+                    )
+            except Exception as e:
+                print(f"Could not plot vertical line for {date_str}: {e}")
     
     fig.update_layout(
         title="Candlestick chart",
