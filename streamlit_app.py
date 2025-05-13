@@ -881,6 +881,24 @@ elif filter_mode == "Company Overview":
                             st.markdown(f"**HP:** {row_data.get('HP', 'N/A')}")
                         with col5:
                             st.markdown(f"**Day Number:** {row_data.get('Day Number', 'N/A')}")
+
+                        # SN-based vertical line mapping
+                        sn_vertical_lines = {
+                            1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
+                            2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
+                            3: ["2025-05-06", "2025-05-10", "2025-05-11"],
+                            4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
+                            5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
+                            6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
+                            7: ["2025-05-04", "2025-05-14"],
+                            8: ["2025-05-05", "2025-05-07", "2025-05-09"],
+                            9: ["2025-05-02", "2025-05-06", "2025-05-11"]
+                        }
+
+                        # Extract SN value from numerology row
+                        sn_value = row_data.get('SN', None)
+                        vertical_lines = sn_vertical_lines.get(sn_value, [])
+
                 else:
                     st.info(f"No numerology data available for {dt_type}.")
             else:
@@ -900,9 +918,8 @@ elif filter_mode == "Company Overview":
             if start_date and end_date:
                 stock_data = get_stock_data(ticker, start_date, end_date)
                 if not stock_data.empty:
-                    chart = plot_candlestick_chart(stock_data)
+                    chart = plot_candlestick_chart(stock_data, vertical_lines=vertical_lines)
                     st.plotly_chart(chart)
-
                 else:
                     st.warning("No data available for the selected date range.")
         else:
