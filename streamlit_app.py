@@ -303,7 +303,7 @@ st.html("""
 """)
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -457,6 +457,32 @@ if filter_mode == "Filter by Sector/Symbol":
 
     else:
         st.warning("No matching data found.")
+
+elif filter_mode == "Numerology Date Filter":
+    st.subheader("📅 Filter Numerology Data by Date")
+
+    # Parse 'date' column correctly using dayfirst=True
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True, errors='coerce')
+
+    # Drop rows with invalid dates just in case
+    numerology_df = numerology_df.dropna(subset=['date'])
+
+    # Date range picker
+    min_date = numerology_df['date'].min().date()
+    max_date = numerology_df['date'].max().date()
+    start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
+    end_date = st.date_input("End Date")
+
+    if start_date > end_date:
+        st.error("❌ Start date must be before or equal to end date.")
+    else:
+        filtered = numerology_df[
+            (numerology_df['date'] >= pd.to_datetime(start_date)) & 
+            (numerology_df['date'] <= pd.to_datetime(end_date))
+        ]
+
+        st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
+        st.dataframe(filtered)
 
 
 elif filter_mode == "Filter by Numerology":
