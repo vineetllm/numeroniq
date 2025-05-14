@@ -477,62 +477,58 @@ if filter_mode == "Filter by Sector/Symbol":
 elif filter_mode == "Numerology Date Filter":
     st.subheader("📅 Filter Numerology Data by Date")
 
-    # Parse 'date' column correctly using dayfirst=True
+    # Parse and clean the date column
     numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True, errors='coerce')
-
-    # Drop rows with invalid dates just in case
     numerology_df = numerology_df.dropna(subset=['date'])
 
-    # Generate decade-based time periods
+    # Get year range
     min_year = numerology_df['date'].dt.year.min()
     max_year = numerology_df['date'].dt.year.max()
 
-    # Build list of decade periods like "1800-1809", "1810-1819", etc.
+    # Build decade periods
     periods = []
     for start in range((min_year // 10) * 10, (max_year // 10 + 1) * 10, 10):
         end = start + 9
-        label = f"{start}-{end}"
-        periods.append(label)
+        periods.append(f"{start}-{end}")
 
-    # Select a time period
+    # Step 1: Select Time Period
     selected_period = st.selectbox("Select Time Period", periods)
-
-    # Convert selected period to actual dates
     start_year, end_year = map(int, selected_period.split('-'))
-    start_date = pd.to_datetime(f"{start_year}-01-01")
-    end_date = pd.to_datetime(f"{end_year}-12-31")
+    period_start = pd.to_datetime(f"{start_year}-01-01")
+    period_end = pd.to_datetime(f"{end_year}-12-31")
 
-    # Filter data based on selected time period
-    filtered = numerology_df[
-        (numerology_df['date'] >= start_date) & 
-        (numerology_df['date'] <= end_date)
+    # Step 2: Let user refine with date pickers within the selected period
+    date_range = numerology_df[(numerology_df['date'] >= period_start) & (numerology_df['date'] <= period_end)]
+    if date_range.empty:
+        st.warning("No data available in this period.")
+        st.stop()
+
+    min_date = date_range['date'].min().date()
+    max_date = date_range['date'].max().date()
+
+    start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
+    end_date = st.date_input("End Date", value=max_date, min_value=start_date, max_value=max_date)
+
+    # Step 3: Filter data based on custom date range within the period
+    filtered = date_range[
+        (date_range['date'] >= pd.to_datetime(start_date)) &
+        (date_range['date'] <= pd.to_datetime(end_date))
     ]
 
+    # Step 4: Additional filters
+    col1, col2, col3, col4, col5 = st.columns(5)
 
-    # Create columns for horizontal layout
-    col1, col2, col3, col4, col5 = st.columns(5)  # Adjust number of columns based on the number of filters
-
-    # BN Filter
     with col1:
         bn_filter = st.selectbox("BN", options=['All'] + numerology_df['BN'].dropna().unique().tolist(), index=0)
-
-    # DN (Formatted) Filter
     with col2:
         dn_filter = st.selectbox("DN (Formatted)", options=['All'] + numerology_df['DN (Formatted)'].dropna().unique().tolist(), index=0)
-
-    # SN Filter
     with col3:
         sn_filter = st.selectbox("SN", options=['All'] + numerology_df['SN'].dropna().unique().tolist(), index=0)
-
-    # HP Filter
     with col4:
         hp_filter = st.selectbox("HP", options=['All'] + numerology_df['HP'].dropna().unique().tolist(), index=0)
-
-    # Day Number Filter
     with col5:
         day_number_filter = st.selectbox("Day Number", options=['All'] + numerology_df['Day Number'].dropna().unique().tolist(), index=0)
 
-    # Apply additional filters
     if bn_filter != 'All':
         filtered = filtered[filtered['BN'] == bn_filter]
     if dn_filter != 'All':
@@ -543,14 +539,13 @@ elif filter_mode == "Numerology Date Filter":
         filtered = filtered[filtered['HP'] == hp_filter]
     if day_number_filter != 'All':
         filtered = filtered[filtered['Day Number'] == day_number_filter]
-            
 
+    # Display filtered data
     st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
-    # Convert DataFrame to HTML table
-    html_table = filtered.to_html(index=False, escape=False)
 
-    # Embed HTML table in a scrollable container
+    html_table = filtered.to_html(index=False, escape=False)
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
 
 
 elif filter_mode == "Filter by Numerology":
