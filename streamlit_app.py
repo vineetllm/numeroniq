@@ -135,10 +135,11 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     
     # Add vertical lines if dates are provided
     if vertical_lines:
+        normalized_index = stock_data.index.normalize()
         for date_str in vertical_lines:
             try:
-                date_obj = pd.to_datetime(date_str)
-                if date_obj in stock_data.index:
+                date_obj = pd.to_datetime(date_str).normalize()
+                if date_obj in normalized_index:
                     fig.add_vline(
                         x=date_obj,
                         line_width=4,
@@ -149,6 +150,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                     )
             except Exception as e:
                 print(f"Could not plot vertical line for {date_str}: {e}")
+
     
     fig.update_layout(
         title="Candlestick chart",
