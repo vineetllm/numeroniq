@@ -902,7 +902,21 @@ elif filter_mode == "Company Overview":
                 else [date_match_option]
             )
 
+            # SN-based vertical line mapping
+            sn_vertical_lines = {
+                1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
+                2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
+                3: ["2025-05-06", "2025-05-10", "2025-05-11"],
+                4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
+                5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
+                6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
+                7: ["2025-05-04", "2025-05-14"],
+                8: ["2025-05-05", "2025-05-07", "2025-05-09"],
+                9: ["2025-05-02", "2025-05-06", "2025-05-11"]
+                }
+
             vertical_lines = []  # ✅ start with empty list
+            
 
             for dt_type in date_types:
                 match_date = selected_row.get(dt_type)
@@ -933,22 +947,12 @@ elif filter_mode == "Company Overview":
                             st.markdown(f"**Day Number:** {row_data.get('Day Number', 'N/A')}")
 
 
-                        # SN-based vertical line mapping
-                        sn_vertical_lines = {
-                            1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
-                            2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
-                            3: ["2025-05-06", "2025-05-10", "2025-05-11"],
-                            4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
-                            5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
-                            6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
-                            7: ["2025-05-04", "2025-05-14"],
-                            8: ["2025-05-05", "2025-05-07", "2025-05-09"],
-                            9: ["2025-05-02", "2025-05-06", "2025-05-11"]
-                        }
 
                         # Extract SN value from numerology row
                         sn_value = row_data.get('SN', None)
-                        vertical_lines = sn_vertical_lines.get(sn_value, [])
+                        if sn_value in sn_vertical_lines:
+                            vertical_lines += sn_vertical_lines[sn_value]
+
 
                 else:
                     st.info(f"No numerology data available for {dt_type}.")
