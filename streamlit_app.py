@@ -483,63 +483,74 @@ elif filter_mode == "Numerology Date Filter":
     # Drop rows with invalid dates just in case
     numerology_df = numerology_df.dropna(subset=['date'])
 
-    # Date range picker
-    min_date = numerology_df['date'].min().date()
-    max_date = numerology_df['date'].max().date()
-    fixed_start_date = '2024-12-31'
-    start_date = st.date_input("Start Date", value=pd.to_datetime(fixed_start_date).date(), max_value=max_date)
-    fixed_end_date = '2025-05-31'
-    end_date = st.date_input("End Date", value=pd.to_datetime(fixed_end_date).date(), min_value=start_date, max_value=max_date)
+    # Generate decade-based time periods
+    min_year = numerology_df['date'].dt.year.min()
+    max_year = numerology_df['date'].dt.year.max()
 
-    if start_date > end_date:
-        st.error("❌ Start date must be before or equal to end date.")
-    else:
-        filtered = numerology_df[
-            (numerology_df['date'] >= pd.to_datetime(start_date)) & 
-            (numerology_df['date'] <= pd.to_datetime(end_date))
-        ]
+    # Build list of decade periods like "1800-1809", "1810-1819", etc.
+    periods = []
+    for start in range((min_year // 10) * 10, (max_year // 10 + 1) * 10, 10):
+        end = start + 9
+        label = f"{start}-{end}"
+        periods.append(label)
 
-        # Create columns for horizontal layout
-        col1, col2, col3, col4, col5 = st.columns(5)  # Adjust number of columns based on the number of filters
+    # Select a time period
+    selected_period = st.selectbox("Select Time Period", periods)
 
-        # BN Filter
-        with col1:
-            bn_filter = st.selectbox("BN", options=['All'] + numerology_df['BN'].dropna().unique().tolist(), index=0)
+    # Convert selected period to actual dates
+    start_year, end_year = map(int, selected_period.split('-'))
+    start_date = pd.to_datetime(f"{start_year}-01-01")
+    end_date = pd.to_datetime(f"{end_year}-12-31")
 
-        # DN (Formatted) Filter
-        with col2:
-            dn_filter = st.selectbox("DN (Formatted)", options=['All'] + numerology_df['DN (Formatted)'].dropna().unique().tolist(), index=0)
+    # Filter data based on selected time period
+    filtered = numerology_df[
+        (numerology_df['date'] >= start_date) & 
+        (numerology_df['date'] <= end_date)
+    ]
 
-        # SN Filter
-        with col3:
-            sn_filter = st.selectbox("SN", options=['All'] + numerology_df['SN'].dropna().unique().tolist(), index=0)
 
-        # HP Filter
-        with col4:
-            hp_filter = st.selectbox("HP", options=['All'] + numerology_df['HP'].dropna().unique().tolist(), index=0)
+    # Create columns for horizontal layout
+    col1, col2, col3, col4, col5 = st.columns(5)  # Adjust number of columns based on the number of filters
 
-        # Day Number Filter
-        with col5:
-            day_number_filter = st.selectbox("Day Number", options=['All'] + numerology_df['Day Number'].dropna().unique().tolist(), index=0)
+    # BN Filter
+    with col1:
+        bn_filter = st.selectbox("BN", options=['All'] + numerology_df['BN'].dropna().unique().tolist(), index=0)
 
-        # Apply additional filters
-        if bn_filter != 'All':
-            filtered = filtered[filtered['BN'] == bn_filter]
-        if dn_filter != 'All':
-            filtered = filtered[filtered['DN (Formatted)'] == dn_filter]
-        if sn_filter != 'All':
-            filtered = filtered[filtered['SN'] == sn_filter]
-        if hp_filter != 'All':
-            filtered = filtered[filtered['HP'] == hp_filter]
-        if day_number_filter != 'All':
-            filtered = filtered[filtered['Day Number'] == day_number_filter]
+    # DN (Formatted) Filter
+    with col2:
+        dn_filter = st.selectbox("DN (Formatted)", options=['All'] + numerology_df['DN (Formatted)'].dropna().unique().tolist(), index=0)
 
-        st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
-        # Convert DataFrame to HTML table
-        html_table = filtered.to_html(index=False, escape=False)
+    # SN Filter
+    with col3:
+        sn_filter = st.selectbox("SN", options=['All'] + numerology_df['SN'].dropna().unique().tolist(), index=0)
 
-        # Embed HTML table in a scrollable container
-        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+    # HP Filter
+    with col4:
+        hp_filter = st.selectbox("HP", options=['All'] + numerology_df['HP'].dropna().unique().tolist(), index=0)
+
+    # Day Number Filter
+    with col5:
+        day_number_filter = st.selectbox("Day Number", options=['All'] + numerology_df['Day Number'].dropna().unique().tolist(), index=0)
+
+    # Apply additional filters
+    if bn_filter != 'All':
+        filtered = filtered[filtered['BN'] == bn_filter]
+    if dn_filter != 'All':
+        filtered = filtered[filtered['DN (Formatted)'] == dn_filter]
+    if sn_filter != 'All':
+        filtered = filtered[filtered['SN'] == sn_filter]
+    if hp_filter != 'All':
+        filtered = filtered[filtered['HP'] == hp_filter]
+    if day_number_filter != 'All':
+        filtered = filtered[filtered['Day Number'] == day_number_filter]
+            
+
+    st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
+    # Convert DataFrame to HTML table
+    html_table = filtered.to_html(index=False, escape=False)
+
+    # Embed HTML table in a scrollable container
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
 elif filter_mode == "Filter by Numerology":
