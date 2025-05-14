@@ -155,7 +155,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 date_obj = pd.to_datetime(date_str).normalize()  # Remove time component
                 if date_obj in stock_data.index:
                     fig.add_vline(
-                        x=date_obj.strftime("%Y-%m-%d"),
+                        x=date_obj,
                         line_width=4,
                         line_dash="dash",
                         line_color="black",
@@ -174,6 +174,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     )
     
     return fig
+
 
 
 # Load data
@@ -499,13 +500,47 @@ elif filter_mode == "Numerology Date Filter":
             (numerology_df['date'] <= pd.to_datetime(end_date))
         ]
 
+        # Create columns for horizontal layout
+        col1, col2, col3, col4, col5 = st.columns(5)  # Adjust number of columns based on the number of filters
+
+        # BN Filter
+        with col1:
+            bn_filter = st.selectbox("BN", options=['All'] + numerology_df['BN'].dropna().unique().tolist(), index=0)
+
+        # DN (Formatted) Filter
+        with col2:
+            dn_filter = st.selectbox("DN (Formatted)", options=['All'] + numerology_df['DN (Formatted)'].dropna().unique().tolist(), index=0)
+
+        # SN Filter
+        with col3:
+            sn_filter = st.selectbox("SN", options=['All'] + numerology_df['SN'].dropna().unique().tolist(), index=0)
+
+        # HP Filter
+        with col4:
+            hp_filter = st.selectbox("HP", options=['All'] + numerology_df['HP'].dropna().unique().tolist(), index=0)
+
+        # Day Number Filter
+        with col5:
+            day_number_filter = st.selectbox("Day Number", options=['All'] + numerology_df['Day Number'].dropna().unique().tolist(), index=0)
+
+        # Apply additional filters
+        if bn_filter != 'All':
+            filtered = filtered[filtered['BN'] == bn_filter]
+        if dn_filter != 'All':
+            filtered = filtered[filtered['DN (Formatted)'] == dn_filter]
+        if sn_filter != 'All':
+            filtered = filtered[filtered['SN'] == sn_filter]
+        if hp_filter != 'All':
+            filtered = filtered[filtered['HP'] == hp_filter]
+        if day_number_filter != 'All':
+            filtered = filtered[filtered['Day Number'] == day_number_filter]
+
         st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
         # Convert DataFrame to HTML table
         html_table = filtered.to_html(index=False, escape=False)
 
         # Embed HTML table in a scrollable container
         st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
-
 
 
 elif filter_mode == "Filter by Numerology":
@@ -951,24 +986,21 @@ elif filter_mode == "Company Overview":
 
                         # SN-based vertical line mapping
                         sn_vertical_lines = {
-                            1: ["2025-05-05 00:00:00", "2025-05-07 00:00:00", "2025-05-08 00:00:00", "2025-05-10 00:00:00"],
-                            2: ["2025-05-03 00:00:00", "2025-05-08 00:00:00", "2025-05-09 00:00:00", "2025-05-13 00:00:00"],
-                            3: ["2025-05-06 00:00:00", "2025-05-10 00:00:00", "2025-05-11 00:00:00"],
-                            4: ["2025-05-01 00:00:00", "2025-05-04 00:00:00", "2025-05-11 00:00:00", "2025-05-12 00:00:00"],
-                            5: ["2025-05-02 00:00:00", "2025-05-05 00:00:00", "2025-05-08 00:00:00", "2025-05-12 00:00:00"],
-                            6: ["2025-05-01 00:00:00", "2025-05-03 00:00:00", "2025-05-11 00:00:00", "2025-05-13 00:00:00"],
-                            7: ["2025-05-04 00:00:00", "2025-05-14 00:00:00"],
-                            8: ["2025-05-05 00:00:00", "2025-05-07 00:00:00", "2025-05-09 00:00:00"],
-                            9: ["2025-05-02 00:00:00", "2025-05-06 00:00:00", "2025-05-11 00:00:00"]
+                            1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
+                            2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
+                            3: ["2025-05-06", "2025-05-10", "2025-05-11"],
+                            4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
+                            5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
+                            6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
+                            7: ["2025-05-04", "2025-05-14"],
+                            8: ["2025-05-05", "2025-05-07", "2025-05-09"],
+                            9: ["2025-05-02", "2025-05-06", "2025-05-11"]
                         }
 
                         # Extract SN value from numerology row
                         sn_value = row_data.get('SN', None)
                         if sn_value in sn_vertical_lines:
                             vertical_lines.extend(sn_vertical_lines[sn_value])
-                            # Sanitize vertical lines to match index format exactly
-                            vertical_lines = [pd.to_datetime(v).normalize().strftime("%Y-%m-%d") for v in vertical_lines]
-
 
 
                 else:
