@@ -904,6 +904,9 @@ elif filter_mode == "Company Overview":
                 else [date_match_option]
             )
 
+            vertical_lines = []
+
+
             for dt_type in date_types:
                 match_date = selected_row.get(dt_type)
                 st.markdown(f"#### 📅 Numerology for {dt_type}: {match_date.date() if pd.notnull(match_date) else 'N/A'}")
@@ -941,7 +944,9 @@ elif filter_mode == "Company Overview":
 
                         # Extract SN value from numerology row
                         sn_value = row_data.get('SN', None)
-                        vertical_lines = sn_vertical_lines.get(sn_value, [])
+                        if sn_value in sn_vertical_lines:
+                            vertical_lines.extend(sn_vertical_lines[sn_value])
+
 
                 else:
                     st.info(f"No numerology data available for {dt_type}.")
