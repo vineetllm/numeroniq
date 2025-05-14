@@ -486,8 +486,9 @@ elif filter_mode == "Numerology Date Filter":
     # Date range picker
     min_date = numerology_df['date'].min().date()
     max_date = numerology_df['date'].max().date()
-    start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
-    fixed_end_date = '1805-12-31'
+    fixed_start_date = '2000-12-31'
+    start_date = st.date_input("Start Date", value=pd.to_datetime(fixed_start_date).date(), max_value=max_date)
+    fixed_end_date = '2010-12-31'
     end_date = st.date_input("End Date", value=pd.to_datetime(fixed_end_date).date(), min_value=start_date, max_value=max_date)
 
     if start_date > end_date:
