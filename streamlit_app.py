@@ -960,6 +960,9 @@ elif filter_mode == "Company Overview":
                         sn_value = row_data.get('SN', None)
                         if sn_value in sn_vertical_lines:
                             vertical_lines.extend(sn_vertical_lines[sn_value])
+                            # Sanitize vertical lines to match index format exactly
+                            vertical_lines = [pd.to_datetime(v).normalize().strftime("%Y-%m-%d") for v in vertical_lines]
+
 
 
                 else:
