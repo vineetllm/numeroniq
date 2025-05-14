@@ -499,7 +499,11 @@ elif filter_mode == "Numerology Date Filter":
         ]
 
         st.write(f"Showing {len(filtered)} records from **{start_date}** to **{end_date}**")
-        st.dataframe(filtered)
+        # Convert DataFrame to HTML table
+        html_table = filtered.to_html(index=False, escape=False)
+
+        # Embed HTML table in a scrollable container
+        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
 elif filter_mode == "Filter by Numerology":
