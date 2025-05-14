@@ -321,7 +321,7 @@ st.html("""
 """)
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC", "Economics"])
+filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC", "Equinox"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -1281,7 +1281,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
             st.warning("No data available for selected filters to display candlestick chart.")
     
 
-elif filter_mode == "Economics":
+elif filter_mode == "Equinox":
     st.subheader("📊 Nifty/BankNifty Report for Primary & Secondary Dates")
 
     # Step 1: Choose Index
