@@ -133,13 +133,15 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
         decreasing_line_color='red'
     )])
     
+    # Standardize the index for reliable comparison
+    stock_data.index = pd.to_datetime(stock_data.index).normalize()
+
     # Add vertical lines if dates are provided
     if vertical_lines:
-        normalized_index = stock_data.index.normalize()
         for date_str in vertical_lines:
             try:
-                date_obj = pd.to_datetime(date_str).normalize()
-                if date_obj in normalized_index:
+                date_obj = pd.to_datetime(date_str).normalize()  # Remove time component
+                if date_obj in stock_data.index:
                     fig.add_vline(
                         x=date_obj,
                         line_width=4,
