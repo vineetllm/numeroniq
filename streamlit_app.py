@@ -1275,7 +1275,90 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
             st.plotly_chart(candlestick, use_container_width=True)
         else:
             st.warning("No data available for selected filters to display candlestick chart.")
-    
+
+
+elif filter_mode == "Economics":
+    st.subheader("📊 Nifty/BankNifty Report for Primary & Secondary Dates")
+
+    # Step 1: Choose Index
+    index_choice = st.selectbox("Choose Index", ["Nifty 50", "Bank Nifty"], key="econ_index")
+
+    file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
+
+    @st.cache_data(ttl=3600)
+    def load_excel_data_for_report(file):
+        df = pd.read_excel(file, index_col=0)
+        df.index = pd.to_datetime(df.index)
+        return df
+
+    ohlc_data = load_excel_data_for_report(file)
+
+    # Ensure numerology dates are datetime
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
+    numerology_data = numerology_df.set_index('date')
+
+    # Step 2: Define all valid numerology dates
+    all_dates = numerology_df['date'].dropna().dt.date.unique()
+    all_dates = sorted(pd.to_datetime(all_dates))
+
+    # Step 3: Time Period Selection
+    st.markdown("### 🗓️ Select Time Period")
+    min_date = min(all_dates)
+    max_date = max(all_dates)
+    col1, col2 = st.columns(2)
+    with col1:
+        start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
+    with col2:
+        end_date = st.date_input("End Date", value=max_date, min_value=min_date, max_value=max_date)
+
+    if start_date > end_date:
+        st.error("Start date must be before or equal to end date.")
+    else:
+        # Define dates of interest
+        primary_dates = {(3, 21), (6, 20), (6, 21), (9, 22), (9, 23), (12, 21), (12, 22)}
+        secondary_dates = {(2, 4), (5, 6), (8, 8), (11, 7)}
+
+        def classify_date(dt):
+            m, d = dt.month, dt.day
+            if (m, d) in primary_dates:
+                return "Primary"
+            elif (m, d) in secondary_dates:
+                return "Secondary"
+            return None
+
+        # Filter numerology dates by selected period
+        filtered_dates = [dt for dt in all_dates if start_date <= dt.date() <= end_date]
+
+        report_rows = []
+        for date in filtered_dates:
+            tag = classify_date(date)
+            if tag:
+                row = {"Date": date, "Category": tag}
+
+                # OHLC if available
+                if date in ohlc_data.index:
+                    row.update(ohlc_data.loc[date].to_dict())
+                else:
+                    for col in ['Open', 'High', 'Low', 'Close', 'Vol(in M)', 'Volatility %', 'Close %']:
+                        row[col] = float('nan')
+
+                # Add numerology info if available
+                if date in numerology_data.index:
+                    row.update(numerology_data.loc[date].to_dict())
+
+                report_rows.append(row)
+
+        if report_rows:
+            final_df = pd.DataFrame(report_rows)
+            final_df = final_df.sort_values("Date", ascending=False).reset_index(drop=True)
+            final_df['Date'] = final_df['Date'].dt.strftime('%Y-%m-%d')
+
+            # Render
+            html_table = final_df.to_html(index=False, escape=False)
+            st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+        else:
+            st.info("No primary or secondary dates found in selected range.")
+
 
 
 
