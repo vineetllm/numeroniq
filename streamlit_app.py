@@ -127,9 +127,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     # ✅ Normalize index for consistent date comparison
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    # ✅ Debug print for troubleshooting
-    st.write("📅 Vertical lines (input):", vertical_lines)
-    st.write("🗓️ Stock data index sample:", stock_data.index[:5])
+    
 
     """
     Generate and return a candlestick chart using Plotly,
