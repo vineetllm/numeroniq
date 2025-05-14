@@ -1297,6 +1297,15 @@ elif filter_mode == "Equinox":
 
     ohlc_data = load_excel_data_for_report(file)
 
+    # Recalculate Volatility % and Close %
+    ohlc_data['Volatility %'] = ((ohlc_data['High'] - ohlc_data['Low']) / ohlc_data['Low']) * 100
+    ohlc_data['Close %'] = ohlc_data['Close'].pct_change() * 100
+
+    # Round for display
+    ohlc_data['Volatility %'] = ohlc_data['Volatility %'].round(2)
+    ohlc_data['Close %'] = ohlc_data['Close %'].round(2)
+
+
     # Ensure numerology dates are datetime
     numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
     numerology_data = numerology_df.set_index('date')
