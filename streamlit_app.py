@@ -7,6 +7,7 @@ from datetime import datetime
 from datetime import timedelta
 import base64
 
+
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
 
@@ -140,9 +141,9 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 if date_obj in stock_data.index:
                     fig.add_vline(
                         x=date_obj,
-                        line_width=2,
-                        line_dash="solid",
-                        line_color="red",
+                        line_width=4,
+                        line_dash="dash",
+                        line_color="black",
                         annotation_text="SN",
                         annotation_position="top left"
                     )
@@ -884,14 +885,7 @@ elif filter_mode == "Company Overview":
             # --- Numerology Selection for Home Page ---
             st.markdown("### 🔢 Numerology Data Based on Selected Date")
 
-            if 'DN (Formatted)' not in numerology_df.columns:
-                dn_values = numerology_df['date'].apply(calculate_destiny_number)
-                numerology_df['DN Raw'] = dn_values.apply(lambda x: x[0])
-                numerology_df['DN'] = dn_values.apply(lambda x: x[1])
-                numerology_df['DN (Formatted)'] = numerology_df.apply(
-                    lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None,
-                axis=1
-            )
+            
 
 
             # Step 1: Ask user for date type preference
@@ -1002,7 +996,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     # Fetch data from yfinance only after last_excel_date
     @st.cache_data(ttl=3600)
     def fetch_yfinance_data(symbol, start_date):
-        yf_data = yf.download(symbol, start=start_date, interval="1d")[['Open', 'High', 'Low', 'Close']]
+        yf_data = yf.download(symbol, start=start_date, interval="1d", multi_level_index= False)[['Open', 'High', 'Low', 'Close']]
         return yf_data
 
     today = datetime.today().date()
@@ -1024,7 +1018,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
 
 
     # Reorder columns: Volatility % and Close % first
-    reordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close']
+    reordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close', 'Vol(in M)']
     full_data = full_data[reordered_cols]
 
     # Default date range: last 90 days
@@ -1096,16 +1090,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
             (filtered_data.index.month == filter_month)
         ]
 
-    # Ensure DN columns exist
-    if 'DN' not in numerology_df.columns:
-        dn_values = numerology_df['date'].apply(calculate_destiny_number)
-        numerology_df['DN Raw'] = dn_values.apply(lambda x: x[0])
-        numerology_df['DN'] = dn_values.apply(lambda x: x[1])
-        numerology_df['DN (Formatted)'] = numerology_df.apply(
-            lambda row: f"({row['DN Raw']}){row['DN']}" if pd.notnull(row['DN Raw']) else None,
-            axis=1
-        )
-
 
     # Merge numerology data with OHLC data on date
     numerology_aligned = numerology_df.copy()
@@ -1151,7 +1135,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     # Display filtered, aligned data
     st.markdown("### 🔢 OHLC + Numerology Alignment")
     # Reorder columns
-    ordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close']
+    ordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close', 'Vol(in M)']
     numerology_cols = ['BN', 'DN (Formatted)', 'SN', 'HP', 'Day Number', 'BN Planet','DN Planet', 'SN Planet', 'HP Planet', 'Day Number Planet']
     # Include date as a column if it's not already (currently index)
     filtered_merged_reset = filtered_merged.reset_index()
@@ -1170,7 +1154,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         'HP Planet', 'Day Number Planet',
         'Volatility %', 'Close %',
         'Open', 'High',
-        'Low', 'Close'
+        'Low', 'Close', 'Vol(in M)'
     ]
     # Convert DataFrame to HTML table
     html_table = filtered_merged_reset[existing_cols].to_html(index=False, escape=False)
