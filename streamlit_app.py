@@ -488,7 +488,8 @@ elif filter_mode == "Numerology Date Filter":
     min_date = numerology_df['date'].min().date()
     max_date = numerology_df['date'].max().date()
     start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
-    end_date = st.date_input("End Date")
+    fixed_end_date = '1805-12-31'
+    end_date = st.date_input("End Date", value=pd.to_datetime(fixed_end_date).date())
 
     if start_date > end_date:
         st.error("❌ Start date must be before or equal to end date.")
@@ -504,6 +505,7 @@ elif filter_mode == "Numerology Date Filter":
 
         # Embed HTML table in a scrollable container
         st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
 
 
 elif filter_mode == "Filter by Numerology":
