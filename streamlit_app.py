@@ -155,7 +155,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 date_obj = pd.to_datetime(date_str).normalize()  # Remove time component
                 if date_obj in stock_data.index:
                     fig.add_vline(
-                        x=date_obj,
+                        x=date_obj.strftime("%Y-%m-%d"),
                         line_width=4,
                         line_dash="dash",
                         line_color="black",
