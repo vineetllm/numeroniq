@@ -902,6 +902,8 @@ elif filter_mode == "Company Overview":
                 else [date_match_option]
             )
 
+            vertical_lines = []  # ✅ start with empty list
+
             for dt_type in date_types:
                 match_date = selected_row.get(dt_type)
                 st.markdown(f"#### 📅 Numerology for {dt_type}: {match_date.date() if pd.notnull(match_date) else 'N/A'}")
@@ -912,6 +914,12 @@ elif filter_mode == "Company Overview":
                     if not numerology_row.empty:
                         row_data = numerology_row.iloc[0]
 
+                        # Collect vertical lines for this SN
+                        sn_value = row_data.get('SN', None)
+                        if sn_value in sn_vertical_lines:
+                            vertical_lines += sn_vertical_lines[sn_value]  # ✅ accumulate
+
+                        # Show numerology data
                         col1, col2, col3, col4, col5 = st.columns(5)
                         with col1:
                             st.markdown(f"**BN:** {row_data.get('BN', 'N/A')}")
@@ -923,6 +931,7 @@ elif filter_mode == "Company Overview":
                             st.markdown(f"**HP:** {row_data.get('HP', 'N/A')}")
                         with col5:
                             st.markdown(f"**Day Number:** {row_data.get('Day Number', 'N/A')}")
+
 
                         # SN-based vertical line mapping
                         sn_vertical_lines = {
