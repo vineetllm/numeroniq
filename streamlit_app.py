@@ -127,7 +127,9 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     # ✅ Normalize index for consistent date comparison
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    
+    # ✅ Debug print for troubleshooting
+    st.write("📅 Vertical lines (input):", vertical_lines)
+    st.write("🗓️ Stock data index sample:", stock_data.index[:5])
 
     """
     Generate and return a candlestick chart using Plotly,
@@ -319,7 +321,7 @@ st.html("""
 """)
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC"])
+filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC", "Economics"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -1224,6 +1226,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         'Open', 'High',
         'Low', 'Close', 'Vol(in M)'
     ]
+    
     # === Color-Coded Rows Based on Date ===
 
     # Define target dates as (month, day)
@@ -1250,6 +1253,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
 
     # Display
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
     
 
     if st.checkbox("📊 Show Candlestick Chart"):
@@ -1275,7 +1279,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
             st.plotly_chart(candlestick, use_container_width=True)
         else:
             st.warning("No data available for selected filters to display candlestick chart.")
-
+    
 
 elif filter_mode == "Economics":
     st.subheader("📊 Nifty/BankNifty Report for Primary & Secondary Dates")
@@ -1358,9 +1362,3 @@ elif filter_mode == "Economics":
             st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
         else:
             st.info("No primary or secondary dates found in selected range.")
-
-
-
-
-
-
