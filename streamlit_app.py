@@ -1229,10 +1229,31 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         'Open', 'High',
         'Low', 'Close', 'Vol(in M)'
     ]
-    # Convert DataFrame to HTML table
-    html_table = filtered_merged_reset[existing_cols].to_html(index=False, escape=False)
+    # === Color-Coded Rows Based on Date ===
 
-    # Embed HTML table in a scrollable container
+    # Define target dates as (month, day)
+    primary_dates = {(3, 20),(3, 21), (6, 20), (6, 21), (9, 22), (9, 23), (12, 21), (12, 22)}
+    secondary_dates = {(2, 4), (5, 6), (8, 8), (11, 7)}
+
+    def highlight_rows(row):
+        date = pd.to_datetime(row['Date'])
+        month_day = (date.month, date.day)
+        if month_day in primary_dates:
+            return 'background-color: lightgreen'
+        elif month_day in secondary_dates:
+            return 'background-color: lightsalmon'
+        else:
+            return ''
+
+    # Apply styles row-wise
+    styled_df = filtered_merged_reset[existing_cols].style.apply(
+        lambda row: [highlight_rows(row)] * len(row), axis=1
+    )
+
+    # Render as HTML
+    html_table = styled_df.to_html()
+
+    # Display
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
     
 
