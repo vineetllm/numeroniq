@@ -149,62 +149,39 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
-def plot_candlestick_chart(stock_data, vertical_lines=None):
-
+def plot_candlestick_chart(df, vertical_lines=[]):
     import plotly.graph_objects as go
-    import pandas as pd
-    import streamlit as st
 
-    # ✅ Normalize index for consistent date comparison
-    stock_data.index = pd.to_datetime(stock_data.index).normalize()
+    fig = go.Figure(data=[
+        go.Candlestick(
+            x=df.index,
+            open=df['Open'],
+            high=df['High'],
+            low=df['Low'],
+            close=df['Close']
+        )
+    ])
 
-    # ✅ Debug print for troubleshooting
-    st.write("📅 Vertical lines (input):", vertical_lines)
-    st.write("🗓️ Stock data index sample:", stock_data.index[:5])
+    # Explicitly cast all vertical lines to datetime64 to match df.index
+    for date in vertical_lines:
+        if isinstance(date, pd.Timestamp):
+            date = date.to_pydatetime()  # convert to native Python datetime
+        fig.add_vline(
+            x=date,
+            line_width=1,
+            line_dash="dash",
+            line_color="red"
+        )
 
-    """
-    Generate and return a candlestick chart using Plotly,
-    with optional vertical lines on specific dates.
-    """
-    fig = go.Figure(data=[go.Candlestick(
-        x=stock_data.index,
-        open=stock_data['Open'],
-        high=stock_data['High'],
-        low=stock_data['Low'],
-        close=stock_data['Close'],
-        increasing_line_color='green',
-        decreasing_line_color='red'
-    )])
-    
-    # Standardize the index for reliable comparison
-    stock_data.index = pd.to_datetime(stock_data.index).normalize()
-
-    # Add vertical lines if dates are provided
-    if vertical_lines:
-        for date_str in vertical_lines:
-            try:
-                date_obj = pd.to_datetime(date_str).normalize()  # Remove time component
-                if date_obj in stock_data.index:
-                    fig.add_vline(
-                        x=date_obj,
-                        line_width=4,
-                        line_dash="dash",
-                        line_color="black",
-                        annotation_text="SN",
-                        annotation_position="top left"
-                    )
-            except Exception as e:
-                print(f"Could not plot vertical line for {date_str}: {e}")
-
-    
     fig.update_layout(
-        title="Candlestick chart",
+        title="Candlestick Chart",
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False
     )
-    
+
     return fig
+
 
 
 # Load data
