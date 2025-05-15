@@ -15,7 +15,7 @@ def hash_password(password):
 
 # Format: username: hashed_password
 USER_CREDENTIALS = {
-    "admin": hash_password("admin123"),
+    "admin": hash_password("admin069"),
     "transleads": hash_password("leads27"),
     "vineetkothari": hash_password("vineet@069"),
 }
