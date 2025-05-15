@@ -15,7 +15,7 @@ def hash_password(password):
 
 # Format: username: hashed_password
 USER_CREDENTIALS = {
-    "admin": hash_password("admin123"),
+    "admin": hash_password("admin069"),
     "transleads": hash_password("leads27"),
     "vineetkothari": hash_password("vineet@069"),
 }
@@ -1049,7 +1049,9 @@ elif filter_mode == "Company Overview":
                     st.info(f"No numerology data available for {dt_type}.")
             else:
                 st.info(f"No date available for {dt_type}.")
-
+            
+            # Convert vertical lines to datetime
+            vertical_lines = [pd.to_datetime(d) for d in vertical_lines]
 
 
             # --- Candlestick Chart (After Zodiac Info) ---
