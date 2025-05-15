@@ -7,6 +7,40 @@ from datetime import datetime
 from datetime import timedelta
 import base64
 
+import hashlib
+
+# Utility function to hash passwords
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
+
+# Format: username: hashed_password
+USER_CREDENTIALS = {
+    "admin": hash_password("admin123"),
+    "transleads": hash_password("leads27"),
+    "vineetkothari": hash_password("vineet@069"),
+}
+
+# Check login status
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+
+def login():
+    st.title("🔐 Secure Access")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username in USER_CREDENTIALS and USER_CREDENTIALS[username] == hash_password(password):
+            st.session_state.authenticated = True
+            st.session_state.username = username
+            st.rerun()
+        else:
+            st.error("❌ Invalid username or password")
+
+# Require login before running the app
+if not st.session_state.authenticated:
+    login()
+    st.stop()
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
@@ -115,9 +149,6 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
-import plotly.graph_objects as go
-import pandas as pd
-
 def plot_candlestick_chart(stock_data, vertical_lines=None):
 
     import plotly.graph_objects as go
@@ -176,12 +207,10 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     return fig
 
 
-
 # Load data
 stock_df = load_stock_data()
 numerology_df = load_numerology_data()
 
-import re
 
 # === Chaldean Numerology Setup ===
 chaldean_map = {
@@ -237,7 +266,6 @@ def calculate_pythagorean_numerology(name):
 
 def get_word_value(word):
     return sum(char_to_num.get(char.upper(), 0) for char in word)
-
 
 def reduce_to_single_digit(n):
     while n > 9:
@@ -309,7 +337,6 @@ def calculate_pythagorean_isin_numerology(isin):
     return reduced, f"{total}({reduced})"
 
 
-
 st.title("📊 Numeroniq")
 
 st.html("""
@@ -321,7 +348,17 @@ st.html("""
 """)
 
 # === Toggle between filtering methods ===
-filter_mode = st.radio("Choose Filter Mode:", ["Company Overview", "Numerology Date Filter", "Filter by Sector/Symbol", "Filter by Numerology","Name Numerology", "View Nifty/BankNifty OHLC", "Equinox"])
+st.sidebar.title("📊 Navigation")
+filter_mode = st.sidebar.radio(
+    "Choose Filter Mode:", 
+    [
+        "Company Overview", 
+        "Numerology Date Filter", 
+        "Filter by Sector/Symbol", 
+        "Filter by Numerology",
+        "Name Numerology", 
+        "View Nifty/BankNifty OHLC", 
+        "Equinox"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -547,8 +584,6 @@ elif filter_mode == "Numerology Date Filter":
 
     html_table = filtered.to_html(index=False, escape=False)
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
-
-
 
 elif filter_mode == "Filter by Numerology":
     st.markdown("### 🔢 Filter by Numerology Values (Live & Horizontal Layout)")
@@ -1037,7 +1072,6 @@ elif filter_mode == "Company Overview":
         else:
             st.warning("No matching company found.")
 
-
 elif filter_mode == "View Nifty/BankNifty OHLC":
     st.subheader("📈 Nifty & BankNifty OHLC Viewer")
 
@@ -1204,11 +1238,13 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
 
     # Display filtered, aligned data
     st.markdown("### 🔢 OHLC + Numerology Alignment")
+    
     # Reorder columns
     ordered_cols = ['Volatility %', 'Close %', 'Open', 'High', 'Low', 'Close', 'Vol(in M)']
     numerology_cols = ['BN', 'DN (Formatted)', 'SN', 'HP', 'Day Number', 'BN Planet','DN Planet', 'SN Planet', 'HP Planet', 'Day Number Planet']
     # Include date as a column if it's not already (currently index)
     filtered_merged_reset = filtered_merged.reset_index()
+    
 
     # Final column order
     final_order = ['Date'] + numerology_cols + ordered_cols
@@ -1243,10 +1279,14 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         else:
             return ''
 
-    # Apply styles row-wise
-    styled_df = filtered_merged_reset[existing_cols].style.apply(
-        lambda row: [highlight_rows(row)] * len(row), axis=1
+    # Apply styles row-wise and format numbers
+    styled_df = (
+        filtered_merged_reset[existing_cols]
+        .style
+        .apply(lambda row: [highlight_rows(row)] * len(row), axis=1)
+        .format(precision=2)  # format all numeric columns to 2 decimal places
     )
+
 
     # Render as HTML
     html_table = styled_df.to_html()
@@ -1280,7 +1320,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         else:
             st.warning("No data available for selected filters to display candlestick chart.")
     
-
 elif filter_mode == "Equinox":
     st.subheader("📊 Nifty/BankNifty Report for Primary & Secondary Dates")
 
@@ -1304,7 +1343,6 @@ elif filter_mode == "Equinox":
     # Round for display
     ohlc_data['Volatility %'] = ohlc_data['Volatility %'].round(2)
     ohlc_data['Close %'] = ohlc_data['Close %'].round(2)
-
 
     # Ensure numerology dates are datetime
     numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
@@ -1366,8 +1404,42 @@ elif filter_mode == "Equinox":
             final_df = final_df.sort_values("Date", ascending=False).reset_index(drop=True)
             final_df['Date'] = final_df['Date'].dt.strftime('%Y-%m-%d')
 
-            # Render
-            html_table = final_df.to_html(index=False, escape=False)
+            # Define float columns to round
+            float_cols = ['Open', 'High', 'Low', 'Close', 'Vol(in M)', 'Volatility %', 'Close %']
+            rounded_df = final_df.copy()
+
+            for col in float_cols:
+                if col in rounded_df.columns:
+                    rounded_df[col] = rounded_df[col].astype(float).round(2)
+
+            # Create formatter for 2 decimal places
+            formatter_dict = {col: "{:.2f}" for col in float_cols if col in rounded_df.columns}
+
+            # === Apply Row Highlights Based on Primary/Secondary ===
+            primary_dates = {(3, 21), (6, 20), (6, 21), (9, 22), (9, 23), (12, 21), (12, 22)}
+            secondary_dates = {(2, 4), (5, 6), (8, 8), (11, 7)}
+
+            def highlight_econ_rows(row):
+                date = pd.to_datetime(row['Date'], errors='coerce')
+                if pd.isna(date): return ''
+                md = (date.month, date.day)
+                if md in primary_dates:
+                    return 'background-color: lightgreen'
+                elif md in secondary_dates:
+                    return 'background-color: lightsalmon'
+                else:
+                    return ''
+
+            # Apply styling + formatting
+            styled_df = rounded_df.style \
+                .apply(lambda row: [highlight_econ_rows(row)] * len(row), axis=1) \
+                .format(formatter_dict)
+
+            # Render to HTML
+            html_table = styled_df.to_html()
+
+            # Display
             st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
         else:
             st.info("No primary or secondary dates found in selected range.")
