@@ -169,7 +169,7 @@ def plot_candlestick_chart(df, vertical_lines=[]):
         fig.add_vline(
             x=date,
             line_width=1,
-            line_dash="dash",
+            line_dash="solid",
             line_color="red"
         )
 
