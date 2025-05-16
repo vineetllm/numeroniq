@@ -1504,50 +1504,62 @@ elif filter_mode == "Moon":
             ticker = selected_symbol + ".NS"
             stock_data = get_stock_data(ticker, selected_date, next_date)
 
-            if not stock_data.empty:
-                numerology_subset = numerology_df.set_index('date')
-                combined = stock_data.merge(numerology_subset, left_index=True, right_index=True, how='left')
+            # Generate full date range
+            all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
 
+            if stock_data.empty:
+                stock_data = pd.DataFrame(index=all_dates)
+                stock_data[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+            else:
+                stock_data = stock_data.reindex(all_dates)
+
+            # Merge with numerology
+            numerology_subset = numerology_df.set_index('date')
+            combined = stock_data.merge(numerology_subset, left_index=True, right_index=True, how='left')
+            combined = combined.loc[all_dates]  # ensure consistent order
+
+            # High/Low check
+            if combined['High'].notna().any():
                 high_val = combined['High'].max()
                 low_val = combined['Low'].min()
                 st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
-                # Render to HTML
-                html_table = combined.to_html()
-
-                # Display
-                st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
-
             else:
-                st.warning("No stock data found for this range.")
+                st.info("No OHLC data available in this period — only numerology shown.")
+
+            # Render table
+            html_table = combined.to_html()
+            st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
 
     # --- INDEX SECTION ---
-    st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
+st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
 
-    index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
-    if index_choice == "Nifty 50":
-        index_file = "nifty.xlsx"
-    else:
-        index_file = "banknifty.xlsx"
+index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
+index_file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
 
-    # Load index data
-    index_df = load_excel_data(index_file)
-    index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
+index_df = load_excel_data(index_file)
+all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
+index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
 
-    if not index_range.empty:
-        numerology_subset = numerology_df.set_index('date')
-        index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+if index_range.empty:
+    index_range = pd.DataFrame(index=all_dates)
+    index_range[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+else:
+    index_range = index_range.reindex(all_dates)
 
-        high_val = index_combined['High'].max()
-        low_val = index_combined['Low'].min()
-        st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}") 
+numerology_subset = numerology_df.set_index('date')
+index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+index_combined = index_combined.loc[all_dates]
 
-        # Render to HTML
-        html_table = index_combined.to_html()
+if index_combined['High'].notna().any():
+    high_val = index_combined['High'].max()
+    low_val = index_combined['Low'].min()
+    st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+else:
+    st.info("No index OHLC data available in this period — only numerology shown.")
 
-        # Display
-        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+html_table = index_combined.to_html()
+st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
-    else:
-        st.warning("No index data found for this period.")
 
 
