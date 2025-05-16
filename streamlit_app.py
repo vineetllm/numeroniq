@@ -1526,8 +1526,11 @@ elif filter_mode == "Moon":
             else:
                 st.info("No OHLC data available in this period — only numerology shown.")
 
+            combined_reset = combined.reset_index()
+            combined_reset.rename(columns={"index": "Date"}, inplace=True)
+
             # Render table
-            html_table = combined.to_html()
+            html_table = combined_reset.to_html(index=False)
             st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
@@ -1558,7 +1561,10 @@ if index_combined['High'].notna().any():
 else:
     st.info("No index OHLC data available in this period — only numerology shown.")
 
-html_table = index_combined.to_html()
+index_combined_reset = index_combined.reset_index()
+index_combined_reset.rename(columns={"index": "Date"}, inplace=True)
+html_table = index_combined_reset.to_html(index=False)
+
 st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
