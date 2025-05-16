@@ -335,7 +335,8 @@ filter_mode = st.sidebar.radio(
         "Filter by Numerology",
         "Name Numerology", 
         "View Nifty/BankNifty OHLC", 
-        "Equinox"])
+        "Equinox",
+        "Moon"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -1422,3 +1423,111 @@ elif filter_mode == "Equinox":
 
         else:
             st.info("No primary or secondary dates found in selected range.")
+
+elif filter_mode == "Moon":
+    st.header("🌑 Moon Phase Analysis")
+
+    # Load moon data
+    moon_df = pd.read_excel("moon.xlsx")
+    moon_df['Date'] = pd.to_datetime(moon_df['Date'], dayfirst=True)
+    moon_df = moon_df.sort_values('Date')
+
+    # Load stock symbols from doc.xlsx
+    doc_df = pd.read_excel("doc.xlsx")
+    available_symbols = sorted(doc_df['Symbol'].dropna().unique().tolist())
+
+    # Load numerology
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True)
+
+    # Moon Phase & Date
+    phase_choice = st.selectbox("Select Moon Phase:", ["Amavasya", "Poornima"])
+    phase_filtered = moon_df[moon_df['A/P'].str.lower() == phase_choice.lower()]
+    available_dates = phase_filtered['Date'].dt.strftime("%Y-%m-%d").tolist()
+    selected_date_str = st.selectbox(f"Select a {phase_choice} Date:", available_dates)
+    selected_date = pd.to_datetime(selected_date_str)
+
+    # Moon Info
+    match = moon_df[moon_df['Date'].dt.date == selected_date.date()]
+    if match.empty:
+        st.error("Selected date not found in moon data.")
+        st.stop()
+
+    selected_row = match.iloc[0]
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.markdown(f"**Degree:** {selected_row['Degree']}")
+    with col2:
+        st.markdown(f"**Time:** {selected_row['Time']}")
+    with col3:
+        st.markdown(f"**Paksh:** {selected_row['Paksh']}")
+
+    # Find next moon date
+    future_dates = moon_df[moon_df['Date'] > selected_date]
+    next_date = future_dates.iloc[0]['Date'] if not future_dates.empty else selected_date + pd.Timedelta(days=15)
+    st.markdown(f"### 📅 Period: {selected_date.date()} to {next_date.date()}")
+
+    st.subheader("📈 Symbol OHLC + Numerology")
+
+    # --- SYMBOL SECTION ---
+    selected_symbol = st.selectbox("Select Stock Symbol:", available_symbols)
+
+    listing_row = doc_df[doc_df['Symbol'] == selected_symbol]
+    if listing_row.empty or pd.isnull(listing_row.iloc[0]['NSE LISTING DATE']):
+        st.warning("Listing date unavailable.")
+    else:
+        listing_date = pd.to_datetime(listing_row.iloc[0]['NSE LISTING DATE'])
+
+        if selected_date < listing_date:
+            st.warning(f"{selected_symbol} was not listed on {selected_date.date()}")
+        else:
+            ticker = selected_symbol + ".NS"
+            stock_data = get_stock_data(ticker, selected_date, next_date)
+
+            if not stock_data.empty:
+                numerology_subset = numerology_df.set_index('date')
+                combined = stock_data.merge(numerology_subset, left_index=True, right_index=True, how='left')
+
+                high_val = combined['High'].max()
+                low_val = combined['Low'].min()
+                st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+                # Render to HTML
+                html_table = combined.to_html()
+
+                # Display
+                st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+            else:
+                st.warning("No stock data found for this range.")
+
+    # --- INDEX SECTION ---
+    st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
+
+    index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
+    if index_choice == "Nifty 50":
+        index_file = "nifty.xlsx"
+    else:
+        index_file = "banknifty.xlsx"
+
+    # Load index data
+    index_df = load_excel_data(index_file)
+    index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
+
+    if not index_range.empty:
+        numerology_subset = numerology_df.set_index('date')
+        index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+
+        high_val = index_combined['High'].max()
+        low_val = index_combined['Low'].min()
+        st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}") 
+
+        # Render to HTML
+        html_table = index_combined.to_html()
+
+        # Display
+        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+    else:
+        st.warning("No index data found for this period.")
+
+
+
