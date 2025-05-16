@@ -15,7 +15,7 @@ def hash_password(password):
 
 # Format: username: hashed_password
 USER_CREDENTIALS = {
-    "admin": hash_password("admin069"),
+    "admin": hash_password("admin123"),
     "transleads": hash_password("leads27"),
     "vineetkothari": hash_password("vineet@069"),
 }
@@ -126,6 +126,12 @@ def load_stock_data():
     df['DATE OF INCORPORATION'] = pd.to_datetime(df['DATE OF INCORPORATION'], errors='coerce')
     return df
 
+@st.cache_data(ttl=3600)
+def load_excel_data(file):
+    df = pd.read_excel(file, index_col=0)
+    df.index = pd.to_datetime(df.index)
+    return df
+
 # Load numerology data
 @st.cache_data
 def load_numerology_data():
@@ -149,39 +155,62 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
-def plot_candlestick_chart(df, vertical_lines=[]):
+def plot_candlestick_chart(stock_data, vertical_lines=None):
+
     import plotly.graph_objects as go
+    import pandas as pd
+    import streamlit as st
 
-    fig = go.Figure(data=[
-        go.Candlestick(
-            x=df.index,
-            open=df['Open'],
-            high=df['High'],
-            low=df['Low'],
-            close=df['Close']
-        )
-    ])
+    # ✅ Normalize index for consistent date comparison
+    stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    # Explicitly cast all vertical lines to datetime64 to match df.index
-    for date in vertical_lines:
-        if isinstance(date, pd.Timestamp):
-            date = date.to_pydatetime()  # convert to native Python datetime
-        fig.add_vline(
-            x=date,
-            line_width=1,
-            line_dash="solid",
-            line_color="red"
-        )
+    # ✅ Debug print for troubleshooting
+    st.write("📅 Vertical lines (input):", vertical_lines)
+    st.write("🗓️ Stock data index sample:", stock_data.index[:5])
 
+    """
+    Generate and return a candlestick chart using Plotly,
+    with optional vertical lines on specific dates.
+    """
+    fig = go.Figure(data=[go.Candlestick(
+        x=stock_data.index,
+        open=stock_data['Open'],
+        high=stock_data['High'],
+        low=stock_data['Low'],
+        close=stock_data['Close'],
+        increasing_line_color='green',
+        decreasing_line_color='red'
+    )])
+    
+    # Standardize the index for reliable comparison
+    stock_data.index = pd.to_datetime(stock_data.index).normalize()
+
+    # Add vertical lines if dates are provided
+    if vertical_lines:
+        for date_str in vertical_lines:
+            try:
+                date_obj = pd.to_datetime(date_str).normalize()  # Remove time component
+                if date_obj in stock_data.index:
+                    fig.add_vline(
+                        x=date_obj,
+                        line_width=4,
+                        line_dash="dash",
+                        line_color="black",
+                        annotation_text="SN",
+                        annotation_position="top left"
+                    )
+            except Exception as e:
+                print(f"Could not plot vertical line for {date_str}: {e}")
+
+    
     fig.update_layout(
-        title="Candlestick Chart",
+        title="Candlestick chart",
         xaxis_title="Date",
         yaxis_title="Price",
         xaxis_rangeslider_visible=False
     )
-
+    
     return fig
-
 
 
 # Load data
@@ -938,7 +967,6 @@ elif filter_mode == "Company Overview":
                 st.markdown(f"**Pythagoras Eqn (Symbol):** {py_symbol_eq}")
                 st.markdown(f"**Pythagoras Eqn (ISIN Code):** {py_isin_eq}")
 
-
             # --- Line 5: Zodiac Signs ---
             st.markdown("### ♈ Zodiac Information (Based on Dates)")
 
@@ -962,9 +990,6 @@ elif filter_mode == "Company Overview":
             # --- Numerology Selection for Home Page ---
             st.markdown("### 🔢 Numerology Data Based on Selected Date")
 
-            
-
-
             # Step 1: Ask user for date type preference
             date_match_option = st.selectbox(
                 "Select Date Type to View Numerology Data:",
@@ -980,7 +1005,6 @@ elif filter_mode == "Company Overview":
             )
 
             vertical_lines = []
-
 
             for dt_type in date_types:
                 match_date = selected_row.get(dt_type)
@@ -1027,10 +1051,9 @@ elif filter_mode == "Company Overview":
                     st.info(f"No numerology data available for {dt_type}.")
             else:
                 st.info(f"No date available for {dt_type}.")
-            
+
             # Convert vertical lines to datetime
             vertical_lines = [pd.to_datetime(d) for d in vertical_lines]
-
 
             # --- Candlestick Chart (After Zodiac Info) ---
             st.markdown("### 📈 Stock Price Candlestick Chart")
@@ -1038,8 +1061,6 @@ elif filter_mode == "Company Overview":
             # Add start and end date selectors for the user to filter the data range
             start_date = st.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
             end_date = st.date_input("End Date", value=pd.to_datetime("today").normalize())
-
-
             ticker = str(row['Symbol']).upper() + ".NS"  # Get the company's symbol
 
             if start_date and end_date:
@@ -1404,9 +1425,9 @@ elif filter_mode == "Equinox":
                 if pd.isna(date): return ''
                 md = (date.month, date.day)
                 if md in primary_dates:
-                    return 'background-color: lightgreen'
+                    return 'background-color: #d1fab8'
                 elif md in secondary_dates:
-                    return 'background-color: lightsalmon'
+                    return 'background-color: #ffa868'
                 else:
                     return ''
 
@@ -1528,6 +1549,5 @@ elif filter_mode == "Moon":
 
     else:
         st.warning("No index data found for this period.")
-
 
 
