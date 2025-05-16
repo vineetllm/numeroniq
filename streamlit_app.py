@@ -1535,37 +1535,37 @@ elif filter_mode == "Moon":
 
 
     # --- INDEX SECTION ---
-st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
+    st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
 
-index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
-index_file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
+    index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
+    index_file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
 
-index_df = load_excel_data(index_file)
-all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
-index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
+    index_df = load_excel_data(index_file)
+    all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
+    index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
 
-if index_range.empty:
-    index_range = pd.DataFrame(index=all_dates)
-    index_range[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
-else:
-    index_range = index_range.reindex(all_dates)
+    if index_range.empty:
+        index_range = pd.DataFrame(index=all_dates)
+        index_range[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+    else:
+        index_range = index_range.reindex(all_dates)
 
-numerology_subset = numerology_df.set_index('date')
-index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
-index_combined = index_combined.loc[all_dates]
+    numerology_subset = numerology_df.set_index('date')
+    index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+    index_combined = index_combined.loc[all_dates]
 
-if index_combined['High'].notna().any():
-    high_val = index_combined['High'].max()
-    low_val = index_combined['Low'].min()
-    st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
-else:
-    st.info("No index OHLC data available in this period — only numerology shown.")
+    if index_combined['High'].notna().any():
+        high_val = index_combined['High'].max()
+        low_val = index_combined['Low'].min()
+        st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+    else:
+        st.info("No index OHLC data available in this period — only numerology shown.")
 
-index_combined_reset = index_combined.reset_index()
-index_combined_reset.rename(columns={"index": "Date"}, inplace=True)
-html_table = index_combined_reset.to_html(index=False)
+    index_combined_reset = index_combined.reset_index()
+    index_combined_reset.rename(columns={"index": "Date"}, inplace=True)
+    html_table = index_combined_reset.to_html(index=False)
 
-st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
 
