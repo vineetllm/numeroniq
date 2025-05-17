@@ -1086,7 +1086,7 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
     # Fetch data from yfinance only after last_excel_date
     @st.cache_data(ttl=3600)
     def fetch_yfinance_data(symbol, start_date):
-        yf_data = yf.download(symbol, start=start_date, interval="1d", multi_level_index= False)[['Open', 'High', 'Low', 'Close']]
+        yf_data = yf.download(symbol, start=start_date, interval="1d", multi_level_index= False)[['Open', 'High', 'Low', 'Close', 'Volume']]
         return yf_data
 
     today = datetime.today().date()
