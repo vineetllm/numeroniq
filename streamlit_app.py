@@ -1552,5 +1552,76 @@ elif filter_mode == "Moon":
 
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
+elif filter_mode == "Sun Number Dates":
+    st.title("🌞 Sun Number Dates")
+
+    # Step 1: User selects which date to base SN on
+    date_type = st.selectbox("Choose Date Type for Sun Number:", 
+                             ["NSE LISTING DATE", "BSE LISTING DATE", "DATE OF INCORPORATION"])
+
+    # Step 2: Map selected date to real SN using numerology_df
+    stock_df['Selected Date'] = pd.to_datetime(stock_df[date_type], errors='coerce')
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
+
+    # Drop duplicates to ensure clean mapping
+    sn_lookup = numerology_df.drop_duplicates(subset='date').set_index('date')['SN']
+    stock_df['Selected SN'] = stock_df['Selected Date'].map(sn_lookup)
+
+    # Step 3: Filter by selected SN
+    valid_sns = sorted(stock_df['Selected SN'].dropna().unique())
+    selected_sn = st.selectbox("Filter by Sun Number:", valid_sns)
+
+    matching_df = stock_df[stock_df['Selected SN'] == selected_sn]
+
+    if matching_df.empty:
+        st.warning("No companies found with this SN.")
+        st.stop()
+
+    # Step 4: User selects company from filtered list
+    company_choice = st.selectbox("Select Company Symbol:", matching_df['Symbol'])
+    selected_row = matching_df[matching_df['Symbol'] == company_choice].iloc[0]
+    st.markdown(f"**Company Name:** {selected_row['Company Name']}")
+
+    # Step 5: Date input
+    default_end = pd.to_datetime("today").normalize()
+    default_start = default_end - pd.Timedelta(days=30)
+    start_date = st.date_input("Start Date", value=default_start)
+    end_date = st.date_input("End Date", value=default_end)
+
+    # Step 6: Get stock data
+    ticker = company_choice + ".NS"
+    stock_data = get_stock_data(ticker, start_date, end_date)
+
+    # Step 7: Prepare vertical lines based on SN
+    sn_vertical_lines = {
+        1: ["2025-05-05", "2025-05-07", "2025-05-08", "2025-05-10"],
+        2: ["2025-05-03", "2025-05-08", "2025-05-09", "2025-05-13"],
+        3: ["2025-05-06", "2025-05-10", "2025-05-11"],
+        4: ["2025-05-01", "2025-05-04", "2025-05-11", "2025-05-12"],
+        5: ["2025-05-02", "2025-05-05", "2025-05-08", "2025-05-12"],
+        6: ["2025-05-01", "2025-05-03", "2025-05-11", "2025-05-13"],
+        7: ["2025-05-04", "2025-05-14"],
+        8: ["2025-05-05", "2025-05-07", "2025-05-09"],
+        9: ["2025-05-02", "2025-05-06", "2025-05-11"]
+    }
+
+    vertical_lines = [pd.to_datetime(d) for d in sn_vertical_lines.get(selected_sn, [])]
+    vertical_lines = [d for d in vertical_lines if start_date <= d.date() <= end_date]
+
+    # Step 8: Plot candlestick chart
+    if not stock_data.empty:
+        st.subheader("📈 Candlestick Chart")
+        chart = plot_candlestick_chart(stock_data, vertical_lines=vertical_lines)
+        st.plotly_chart(chart)
+    else:
+        st.warning("No stock data found for selected date range.")
+
+    # Step 9: Merge with numerology and show OHLCV + numerology
+    st.subheader("📊 OHLC + Numerology Data")
+    if not stock_data.empty:
+        stock_data.index = pd.to_datetime(stock_data.index)
+        numerology_merge = numerology_df.set_index('date')
+        merged = stock_data.merge(numerology_merge, left_index=True, right_index=True, how='left')
+        st.dataframe(merged.reset_index())
 
 
