@@ -180,7 +180,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 fig.add_vline(
                     x=date_str,
                     line_width=2,
-                    line_dash="dash",
+                    line_dash="solid",
                     line_color="black",
                     
                 )
