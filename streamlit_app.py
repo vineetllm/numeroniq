@@ -187,7 +187,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
 
     for date_str in vertical_lines:
         try:
-            date_obj = pd.to_datetime(date_str).normalize()
+            date_obj = pd.to_datetime(date_obj).normalize()
             fig.add_vline(
                 x=date_obj,
                 line_width=2,
