@@ -182,8 +182,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                     line_width=2,
                     line_dash="dash",
                     line_color="black",
-                    annotation_text="SN",
-                    annotation_position="top left"
+                    
                 )
             except Exception as e:
                 st.error(f"Could not plot vertical line for {date}: {e}")
