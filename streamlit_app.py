@@ -156,22 +156,12 @@ def get_stock_data(ticker, start_date, end_date):
     return stock_data
 
 def plot_candlestick_chart(stock_data, vertical_lines=None):
-
     import plotly.graph_objects as go
     import pandas as pd
     import streamlit as st
 
-    # ✅ Normalize index for consistent date comparison
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    # ✅ Debug print for troubleshooting
-    st.write("📅 Vertical lines (input):", vertical_lines)
-    st.write("🗓️ Stock data index sample:", stock_data.index[:5])
-
-    """
-    Generate and return a candlestick chart using Plotly,
-    with optional vertical lines on specific dates.
-    """
     fig = go.Figure(data=[go.Candlestick(
         x=stock_data.index,
         open=stock_data['Open'],
@@ -181,26 +171,23 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
         increasing_line_color='green',
         decreasing_line_color='red'
     )])
-    
-    # Standardize the index for reliable comparison
-    stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    for date_str in vertical_lines:
-        try:
-            date_str = pd.to_datetime(date_str).strftime('%Y-%m-%d')
-            fig.add_vline(
-                x=date_str,
-                line_width=2,
-                line_dash="dash",
-                line_color="black",
-                annotation_text="SN",
-                annotation_position="top left"
-            )
-        except Exception as e:
-            print(f"Could not plot vertical line for {date_str}: {e}")
+    # Draw vertical lines if provided
+    if vertical_lines:
+        for date in vertical_lines:
+            try:
+                date_str = pd.to_datetime(date).strftime('%Y-%m-%d')
+                fig.add_vline(
+                    x=date_str,
+                    line_width=2,
+                    line_dash="dash",
+                    line_color="black",
+                    annotation_text="SN",
+                    annotation_position="top left"
+                )
+            except Exception as e:
+                st.error(f"Could not plot vertical line for {date}: {e}")
 
-
-    
     fig.update_layout(
         title="Candlestick chart",
         xaxis_title="Date",
@@ -209,6 +196,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     )
     
     return fig
+
 
 
 # Load data
