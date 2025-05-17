@@ -350,7 +350,8 @@ filter_mode = st.sidebar.radio(
         "Name Numerology", 
         "View Nifty/BankNifty OHLC", 
         "Equinox",
-        "Moon"])
+        "Moon",
+        "Sun Number Dates"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
