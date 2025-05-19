@@ -361,7 +361,8 @@ filter_mode = st.sidebar.radio(
         "Equinox",
         "Moon",
         "Mercury",
-        "Sun Number Dates"])
+        "Sun Number Dates",
+        "Panchak"])
 
 if filter_mode == "Filter by Sector/Symbol":
     # === Sector Filter ===
@@ -1804,3 +1805,76 @@ elif filter_mode == "Sun Number Dates":
 
         # Display
         st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+elif filter_mode == "Panchak":
+    st.title("📅 Panchak Dates Analysis")
+
+    # Load Panchak data
+    panchak_df = pd.read_excel("panchak.xlsx")
+    panchak_df['Start Date'] = pd.to_datetime(panchak_df['Start Date'], errors='coerce', dayfirst=True)
+    panchak_df['End Date'] = pd.to_datetime(panchak_df['End Date'], errors='coerce', dayfirst=True)
+    panchak_df = panchak_df.dropna(subset=['Start Date', 'End Date']).sort_values('Start Date').reset_index(drop=True)
+
+    # Load moon data
+    moon_df = pd.read_excel("moon.xlsx")
+    moon_df['Date'] = pd.to_datetime(moon_df['Date'], errors='coerce')
+    amavasya_dates = set(moon_df[moon_df['A/P'].str.lower() == "amavasya"]['Date'].dt.date)
+    poornima_dates = set(moon_df[moon_df['A/P'].str.lower() == "poornima"]['Date'].dt.date)
+
+    # Load stock symbol list
+    symbol_list = ["Nifty", "BankNifty"] + sorted(stock_df['Symbol'].dropna().unique().tolist())
+
+    # Step 1: Select Panchak start date
+    valid_start_dates = panchak_df['Start Date'].dt.date.unique()
+    selected_start_date = st.selectbox("Select Panchak Start Date:", valid_start_dates)
+
+    # Step 2: Get matching row
+    row = panchak_df[panchak_df['Start Date'].dt.date == selected_start_date].iloc[0]
+    start_date = row['Start Date']
+    end_date = row['End Date']
+
+    if end_date < start_date:
+        st.error("End Date is earlier than Start Date. Please fix the data in panchak.xlsx.")
+        st.stop()
+
+    st.markdown(f"### 🕒 Panchak Period: {start_date.date()} to {end_date.date()}")
+    st.markdown(f"**Start Time:** {row['Start Time']} | **End Time:** {row['End Time']}")
+    st.markdown(f"**Start Degree:** {row['Degree']:.4f}")
+
+    # Step 3: Select stock symbol
+    selected_symbol = st.selectbox("Select Symbol", symbol_list)
+    if selected_symbol == "Nifty":
+        ticker = "^NSEI"
+    elif selected_symbol == "BankNifty":
+        ticker = "^NSEBANK"
+    else:
+        ticker = selected_symbol + ".NS"
+
+    # Step 4: Get stock data
+    ohlc = get_stock_data(ticker, start_date, end_date)
+    if ohlc.empty:
+        st.warning("No stock data found for this period.")
+        st.stop()
+
+    # Step 5: Show High/Low
+    high = ohlc['High'].max()
+    low = ohlc['Low'].min()
+    st.markdown(f"**High:** {high:.2f} | **Low:** {low:.2f}")
+
+    # Step 6: Merge with numerology
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
+    merged = ohlc.merge(numerology_df.set_index('date'), left_index=True, right_index=True, how='left')
+    merged = merged.reset_index().rename(columns={"index": "Date"})
+
+    # Step 7: Highlight rows for Amavasya/Poornima
+    def highlight_moon_rows(row):
+        date = row['Date'].date() if isinstance(row['Date'], pd.Timestamp) else None
+        if date in amavasya_dates:
+            return ['background-color: #ffcccc'] * len(row)
+        elif date in poornima_dates:
+            return ['background-color: #ccf2ff'] * len(row)
+        else:
+            return [''] * len(row)
+
+    styled_df = merged.style.apply(highlight_moon_rows, axis=1)
+    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
