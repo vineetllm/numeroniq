@@ -155,6 +155,7 @@ def get_stock_data(ticker, start_date, end_date):
     stock_data = yf.download(ticker, start=start_date, end=end_date, multi_level_index = False)
     return stock_data
 
+
 def plot_candlestick_chart(stock_data, vertical_lines=None):
 
     import plotly.graph_objects as go
@@ -179,7 +180,6 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
         decreasing_line_color='red'
     )])
     
-    # Standardize the index for reliable comparison
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
     for date_str in vertical_lines:
@@ -1561,12 +1561,20 @@ elif filter_mode == "Moon":
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 elif filter_mode == "Mercury":
-    st.header("🌑 Mercury Phase Analysis")
+    st.header("🪐Mercury Phase Analysis")
 
     # Load mercury data
     mercury_df = pd.read_excel("mercury.xlsx")
     mercury_df['Date'] = pd.to_datetime(mercury_df['Date'], dayfirst=True)
     mercury_df = mercury_df.sort_values('Date')
+    # Load moon phase data
+    moon_df = pd.read_excel("moon.xlsx")
+    moon_df['Date'] = pd.to_datetime(moon_df['Date'], dayfirst=True)
+
+    # Get dates for Amavasya and Poornima
+    amavasya_dates = set(moon_df[moon_df['A/P'].str.lower() == "amavasya"]['Date'].dt.date)
+    poornima_dates = set(moon_df[moon_df['A/P'].str.lower() == "poornima"]['Date'].dt.date)
+
 
     # Load stock symbols from doc.xlsx
     doc_df = pd.read_excel("doc.xlsx")
@@ -1582,18 +1590,32 @@ elif filter_mode == "Mercury":
     selected_date_str = st.selectbox(f"Select a {phase_choice} Date:", available_dates)
     selected_date = pd.to_datetime(selected_date_str)
 
+    future_dates = mercury_df[mercury_df['Date'] > selected_date]
+    next_date = future_dates.iloc[0]['Date'] if not future_dates.empty else selected_date + pd.Timedelta(days=15)
+
     # mercury Info
     match = mercury_df[mercury_df['Date'].dt.date == selected_date.date()]
     if match.empty:
         st.error("Selected date not found in mercury data.")
         st.stop()
 
-    selected_row = match.iloc[0]
+    # Mercury info at start date
+    start_row = mercury_df[mercury_df['Date'].dt.date == selected_date.date()]
+    start_degree = start_row.iloc[0]['Degree'] if not start_row.empty else "N/A"
+    start_time = start_row.iloc[0]['Time'] if not start_row.empty else "N/A"
+
+    # Mercury info at end date (if exists)
+    end_row = mercury_df[mercury_df['Date'].dt.date == next_date.date()]
+    end_degree = end_row.iloc[0]['Degree'] if not end_row.empty else "N/A"
+    end_time = end_row.iloc[0]['Time'] if not end_row.empty else "N/A"
+
+    # Display both
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown(f"**Degree:** {selected_row['Degree']}")
+        st.markdown(f"**Start Date:** {selected_date.date()}  \n**Degree:** {start_degree}  \n**Time:** {start_time}")
     with col2:
-        st.markdown(f"**Time:** {selected_row['Time']}")
+        st.markdown(f"**End Date:** {next_date.date()}  \n**Degree:** {end_degree}  \n**Time:** {end_time}")
+
     
 
     # Find next mercury date
@@ -1643,8 +1665,19 @@ elif filter_mode == "Mercury":
             combined_reset = combined.reset_index()
             combined_reset.rename(columns={"index": "Date"}, inplace=True)
 
+            # Step 7: Highlight rows based on moon phase
+            def highlight_moon_rows(row):
+                date = row['Date'].date() if isinstance(row['Date'], pd.Timestamp) else None
+                if date in amavasya_dates:
+                    return ['background-color: #ff2525'] * len(row)  # Light red
+                elif date in poornima_dates:
+                    return ['background-color: #7aceff'] * len(row)  # Sky blue
+                else:
+                    return [''] * len(row)
+
             # Render table
-            html_table = combined_reset.to_html(index=False)
+            styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1)
+            html_table = styled_df.to_html()
             st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
@@ -1677,7 +1710,21 @@ elif filter_mode == "Mercury":
 
     index_combined_reset = index_combined.reset_index()
     index_combined_reset.rename(columns={"index": "Date"}, inplace=True)
-    html_table = index_combined_reset.to_html(index=False)
+
+    # Step 7: Highlight rows based on moon phase
+    def highlight_moon_rows(row):
+        date = row['Date'].date() if isinstance(row['Date'], pd.Timestamp) else None
+        if date in amavasya_dates:
+            return ['background-color: #ff2525'] * len(row)  # Light red
+        elif date in poornima_dates:
+            return ['background-color: #7aceff'] * len(row)  # Sky blue
+        else:
+            return [''] * len(row)
+
+    # Step 8: Display styled table
+    styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1)
+    html_table = styled_df.to_html()
+    
 
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
@@ -1751,4 +1798,9 @@ elif filter_mode == "Sun Number Dates":
         stock_data.index = pd.to_datetime(stock_data.index)
         numerology_merge = numerology_df.set_index('date')
         merged = stock_data.merge(numerology_merge, left_index=True, right_index=True, how='left')
-        st.dataframe(merged.reset_index())
+        
+        # Render as HTML
+        html_table = merged.reset_index().to_html()
+
+        # Display
+        st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
