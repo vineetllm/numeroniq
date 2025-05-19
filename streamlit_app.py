@@ -156,12 +156,19 @@ def get_stock_data(ticker, start_date, end_date):
     return stock_data
 
 def plot_candlestick_chart(stock_data, vertical_lines=None):
+
     import plotly.graph_objects as go
     import pandas as pd
     import streamlit as st
 
+    # ✅ Normalize index for consistent date comparison
     stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
+
+    """
+    Generate and return a candlestick chart using Plotly,
+    with optional vertical lines on specific dates.
+    """
     fig = go.Figure(data=[go.Candlestick(
         x=stock_data.index,
         open=stock_data['Open'],
@@ -171,22 +178,26 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
         increasing_line_color='green',
         decreasing_line_color='red'
     )])
+    
+    # Standardize the index for reliable comparison
+    stock_data.index = pd.to_datetime(stock_data.index).normalize()
 
-    # Draw vertical lines if provided
-    if vertical_lines:
-        for date in vertical_lines:
-            try:
-                date_str = pd.to_datetime(date).strftime('%Y-%m-%d')
-                fig.add_vline(
-                    x=date_str,
-                    line_width=2,
-                    line_dash="solid",
-                    line_color="black",
-                    
-                )
-            except Exception as e:
-                st.error(f"Could not plot vertical line for {date}: {e}")
+    for date_str in vertical_lines:
+        try:
+            date_obj = pd.to_datetime(date_str).normalize()
+            fig.add_vline(
+                x=date_obj,
+                line_width=2,
+                line_dash="dash",
+                line_color="black",
+                annotation_text="SN",
+                annotation_position="top left"
+            )
+        except Exception as e:
+            print(f"Could not plot vertical line for {date_str}: {e}")
 
+
+    
     fig.update_layout(
         title="Candlestick chart",
         xaxis_title="Date",
@@ -195,7 +206,6 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
     )
     
     return fig
-
 
 
 # Load data
@@ -351,6 +361,7 @@ filter_mode = st.sidebar.radio(
         "View Nifty/BankNifty OHLC", 
         "Equinox",
         "Moon",
+        "Mercury",
         "Sun Number Dates"])
 
 if filter_mode == "Filter by Sector/Symbol":
@@ -1038,13 +1049,11 @@ elif filter_mode == "Company Overview":
             else:
                 st.info(f"No date available for {dt_type}.")
 
-            # Convert vertical lines to datetime
             vertical_lines = [pd.to_datetime(d) for d in vertical_lines]
 
             # --- Candlestick Chart (After Zodiac Info) ---
             st.markdown("### 📈 Stock Price Candlestick Chart")
 
-            # Add start and end date selectors for the user to filter the data range
             start_date = st.date_input("Start Date", value=pd.to_datetime("2020-01-01"))
             end_date = st.date_input("End Date", value=pd.to_datetime("today").normalize())
             ticker = str(row['Symbol']).upper() + ".NS"  # Get the company's symbol
@@ -1080,7 +1089,6 @@ elif filter_mode == "View Nifty/BankNifty OHLC":
         df.index = pd.to_datetime(df.index)
         return df
 
-    # Load data from file
     excel_data = load_excel_data(file)
     last_excel_date = excel_data.index[-1].date()
 
@@ -1479,10 +1487,131 @@ elif filter_mode == "Moon":
     selected_symbol = st.selectbox("Select Stock Symbol:", available_symbols)
 
     listing_row = doc_df[doc_df['Symbol'] == selected_symbol]
-    if listing_row.empty or pd.isnull(listing_row.iloc[0]['NSE LISTING DATE']):
+    if listing_row.empty or pd.isnull(listing_row.iloc[0]['DATE OF INCORPORATION']):
         st.warning("Listing date unavailable.")
     else:
-        listing_date = pd.to_datetime(listing_row.iloc[0]['NSE LISTING DATE'])
+        listing_date = pd.to_datetime(listing_row.iloc[0]['DATE OF INCORPORATION'])
+
+        if selected_date < listing_date:
+            st.warning(f"{selected_symbol} was not listed on {selected_date.date()}")
+        else:
+            ticker = selected_symbol + ".NS"
+            stock_data = get_stock_data(ticker, selected_date, next_date)
+
+            # Generate full date range
+            all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
+
+            if stock_data.empty:
+                stock_data = pd.DataFrame(index=all_dates)
+                stock_data[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+            else:
+                stock_data = stock_data.reindex(all_dates)
+
+            # Merge with numerology
+            numerology_subset = numerology_df.set_index('date')
+            combined = stock_data.merge(numerology_subset, left_index=True, right_index=True, how='left')
+            combined = combined.loc[all_dates]  # ensure consistent order
+
+            # High/Low check
+            if combined['High'].notna().any():
+                high_val = combined['High'].max()
+                low_val = combined['Low'].min()
+                st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+            else:
+                st.info("No OHLC data available in this period — only numerology shown.")
+
+            combined_reset = combined.reset_index()
+            combined_reset.rename(columns={"index": "Date"}, inplace=True)
+
+            # Render table
+            html_table = combined_reset.to_html(index=False)
+            st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+
+    # --- INDEX SECTION ---
+    st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
+
+    index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
+    index_file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
+
+    index_df = load_excel_data(index_file)
+    all_dates = pd.date_range(start=selected_date, end=next_date - pd.Timedelta(days=1))
+    index_range = index_df[(index_df.index >= selected_date) & (index_df.index < next_date)]
+
+    if index_range.empty:
+        index_range = pd.DataFrame(index=all_dates)
+        index_range[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+    else:
+        index_range = index_range.reindex(all_dates)
+
+    numerology_subset = numerology_df.set_index('date')
+    index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+    index_combined = index_combined.loc[all_dates]
+
+    if index_combined['High'].notna().any():
+        high_val = index_combined['High'].max()
+        low_val = index_combined['Low'].min()
+        st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+    else:
+        st.info("No index OHLC data available in this period — only numerology shown.")
+
+    index_combined_reset = index_combined.reset_index()
+    index_combined_reset.rename(columns={"index": "Date"}, inplace=True)
+    html_table = index_combined_reset.to_html(index=False)
+
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+elif filter_mode == "Mercury":
+    st.header("🌑 Mercury Phase Analysis")
+
+    # Load mercury data
+    mercury_df = pd.read_excel("mercury.xlsx")
+    mercury_df['Date'] = pd.to_datetime(mercury_df['Date'], dayfirst=True)
+    mercury_df = mercury_df.sort_values('Date')
+
+    # Load stock symbols from doc.xlsx
+    doc_df = pd.read_excel("doc.xlsx")
+    available_symbols = sorted(doc_df['Symbol'].dropna().unique().tolist())
+
+    # Load numerology
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True)
+
+    # mercury Phase & Date
+    phase_choice = st.selectbox("Select mercury Phase:", ["Direct", "Retrograde"])
+    phase_filtered = mercury_df[mercury_df['D/R'].str.lower() == phase_choice.lower()]
+    available_dates = phase_filtered['Date'].dt.strftime("%Y-%m-%d").tolist()
+    selected_date_str = st.selectbox(f"Select a {phase_choice} Date:", available_dates)
+    selected_date = pd.to_datetime(selected_date_str)
+
+    # mercury Info
+    match = mercury_df[mercury_df['Date'].dt.date == selected_date.date()]
+    if match.empty:
+        st.error("Selected date not found in mercury data.")
+        st.stop()
+
+    selected_row = match.iloc[0]
+    col1, col2 = st.columns(2)
+    with col1:
+        st.markdown(f"**Degree:** {selected_row['Degree']}")
+    with col2:
+        st.markdown(f"**Time:** {selected_row['Time']}")
+    
+
+    # Find next mercury date
+    future_dates = mercury_df[mercury_df['Date'] > selected_date]
+    next_date = future_dates.iloc[0]['Date'] if not future_dates.empty else selected_date + pd.Timedelta(days=15)
+    st.markdown(f"### 📅 Period: {selected_date.date()} to {next_date.date()}")
+
+    st.subheader("📈 Symbol OHLC + Numerology")
+
+    # --- SYMBOL SECTION ---
+    selected_symbol = st.selectbox("Select Stock Symbol:", available_symbols)
+
+    listing_row = doc_df[doc_df['Symbol'] == selected_symbol]
+    if listing_row.empty or pd.isnull(listing_row.iloc[0]['DATE OF INCORPORATION']):
+        st.warning("Listing date unavailable.")
+    else:
+        listing_date = pd.to_datetime(listing_row.iloc[0]['DATE OF INCORPORATION'])
 
         if selected_date < listing_date:
             st.warning(f"{selected_symbol} was not listed on {selected_date.date()}")
@@ -1624,5 +1753,3 @@ elif filter_mode == "Sun Number Dates":
         numerology_merge = numerology_df.set_index('date')
         merged = stock_data.merge(numerology_merge, left_index=True, right_index=True, how='left')
         st.dataframe(merged.reset_index())
-
-
