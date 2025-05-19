@@ -1821,28 +1821,23 @@ elif filter_mode == "Panchak":
     amavasya_dates = set(moon_df[moon_df['A/P'].str.lower() == "amavasya"]['Date'].dt.date)
     poornima_dates = set(moon_df[moon_df['A/P'].str.lower() == "poornima"]['Date'].dt.date)
 
-    # Load stock symbol list
+    # Symbol list
     symbol_list = ["Nifty", "BankNifty"] + sorted(stock_df['Symbol'].dropna().unique().tolist())
+    selected_symbol = st.selectbox("Select Symbol", symbol_list)
 
-    # Step 1: Select Panchak start date
-    valid_start_dates = panchak_df['Start Date'].dt.date.unique()
-    selected_start_date = st.selectbox("Select Panchak Start Date:", valid_start_dates)
+    # Select Panchak start date
+    selected_start_date = st.selectbox("Select Panchak Start Date:", panchak_df['Start Date'].dt.date.unique())
 
-    # Step 2: Get matching row
+    # Get the corresponding row
     row = panchak_df[panchak_df['Start Date'].dt.date == selected_start_date].iloc[0]
     start_date = row['Start Date']
     end_date = row['End Date']
-
-    if end_date < start_date:
-        st.error("End Date is earlier than Start Date. Please fix the data in panchak.xlsx.")
-        st.stop()
 
     st.markdown(f"### 🕒 Panchak Period: {start_date.date()} to {end_date.date()}")
     st.markdown(f"**Start Time:** {row['Start Time']} | **End Time:** {row['End Time']}")
     st.markdown(f"**Start Degree:** {row['Degree']:.4f}")
 
-    # Step 3: Select stock symbol
-    selected_symbol = st.selectbox("Select Symbol", symbol_list)
+    # Determine stock symbol
     if selected_symbol == "Nifty":
         ticker = "^NSEI"
     elif selected_symbol == "BankNifty":
@@ -1850,31 +1845,46 @@ elif filter_mode == "Panchak":
     else:
         ticker = selected_symbol + ".NS"
 
-    # Step 4: Get stock data
+    # Get OHLC data
     ohlc = get_stock_data(ticker, start_date, end_date)
+
+    # Full date range
+    all_dates = pd.date_range(start=start_date, end=end_date - pd.Timedelta(days=1))
+
     if ohlc.empty:
-        st.warning("No stock data found for this period.")
-        st.stop()
+        ohlc = pd.DataFrame(index=all_dates)
+        ohlc[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+    else:
+        ohlc = ohlc.reindex(all_dates)
 
-    # Step 5: Show High/Low
-    high = ohlc['High'].max()
-    low = ohlc['Low'].min()
-    st.markdown(f"**High:** {high:.2f} | **Low:** {low:.2f}")
+    # Load and prepare numerology data
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce').dt.date
+    numerology_subset = numerology_df.set_index('date')
 
-    # Step 6: Merge with numerology
-    numerology_df['date'] = pd.to_datetime(numerology_df['date'], errors='coerce')
-    merged = ohlc.merge(numerology_df.set_index('date'), left_index=True, right_index=True, how='left')
+    # Merge OHLC and numerology
+    merged = ohlc.merge(numerology_subset, left_index=True, right_index=True, how='left')
+    merged = merged.loc[all_dates]
     merged = merged.reset_index().rename(columns={"index": "Date"})
 
-    # Step 7: Highlight rows for Amavasya/Poornima
+    # High/Low display
+    if merged['High'].notna().any():
+        high_val = merged['High'].max()
+        low_val = merged['Low'].min()
+        st.markdown(f"**📈 High:** {high_val:.2f} | 📉 Low:** {low_val:.2f}")
+    else:
+        st.warning("⚠ No OHLC data available for this period — only numerology is shown.")
+
+    # Highlight Amavasya / Poornima
     def highlight_moon_rows(row):
         date = row['Date'].date() if isinstance(row['Date'], pd.Timestamp) else None
         if date in amavasya_dates:
-            return ['background-color: #ffcccc'] * len(row)
+            return ['background-color: #ffcccc'] * len(row)  # Light red
         elif date in poornima_dates:
-            return ['background-color: #ccf2ff'] * len(row)
+            return ['background-color: #ccf2ff'] * len(row)  # Sky blue
         else:
             return [''] * len(row)
 
+    # Display styled table
     styled_df = merged.style.apply(highlight_moon_rows, axis=1)
-    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
+    html_table = styled_df.to_html()
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
