@@ -190,7 +190,7 @@ def plot_candlestick_chart(stock_data, vertical_lines=None):
                 line_width=2,
                 line_dash="solid",
                 line_color="black",
-                
+               
             )
         except Exception as e:
             print(f"Could not plot vertical line for {date_str}: {e}")
