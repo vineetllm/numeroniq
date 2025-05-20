@@ -1723,7 +1723,7 @@ elif filter_mode == "Mercury":
             return [''] * len(row)
 
     # Step 8: Display styled table
-    styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1)
+    styled_df = index_combined_reset.style.apply(highlight_moon_rows, axis=1)
     html_table = styled_df.to_html()
     
 
