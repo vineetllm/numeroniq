@@ -1837,16 +1837,36 @@ elif filter_mode == "Panchak":
     st.markdown(f"**Start Time:** {row['Start Time']} | **End Time:** {row['End Time']}")
     st.markdown(f"**Start Degree:** {row['Degree']:.4f}")
 
-    # Determine stock symbol
-    if selected_symbol == "Nifty":
-        ticker = "^NSEI"
-    elif selected_symbol == "BankNifty":
-        ticker = "^NSEBANK"
-    else:
-        ticker = selected_symbol + ".NS"
+    # Helper: load + update index data
+    def get_combined_index_data(symbol, start_date, end_date):
+        file = "nifty.xlsx" if symbol == "Nifty" else "banknifty.xlsx"
+        ticker = "^NSEI" if symbol == "Nifty" else "^NSEBANK"
+
+        df = pd.read_excel(file)
+        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
+        df = df.dropna(subset=['Date'])
+        df.set_index('Date', inplace=True)
+        df = df.sort_index()
+
+        latest_local_date = df.index.max().date()
+        if end_date.date() > latest_local_date:
+            import yfinance as yf
+            fetch_start = latest_local_date + pd.Timedelta(days=1)
+            yf_data = yf.download(ticker, start=fetch_start, end=end_date + pd.Timedelta(days=1), progress=False)
+            if not yf_data.empty:
+                yf_data = yf_data[['Open', 'High', 'Low', 'Close', 'Volume']]
+                yf_data.index = pd.to_datetime(yf_data.index)
+                df = pd.concat([df, yf_data[~yf_data.index.isin(df.index)]])
+                df = df[~df.index.duplicated(keep='last')]
+
+        return df.loc[start_date:end_date - pd.Timedelta(days=1)]
 
     # Get OHLC data
-    ohlc = get_stock_data(ticker, start_date, end_date)
+    if selected_symbol in ["Nifty", "BankNifty"]:
+        ohlc = get_combined_index_data(selected_symbol, start_date, end_date)
+    else:
+        ticker = selected_symbol + ".NS"
+        ohlc = get_stock_data(ticker, start_date, end_date)
 
     # Full date range
     all_dates = pd.date_range(start=start_date, end=end_date - pd.Timedelta(days=1))
