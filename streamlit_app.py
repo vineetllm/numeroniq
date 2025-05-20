@@ -1869,7 +1869,7 @@ elif filter_mode == "Panchak":
         ohlc = get_stock_data(ticker, start_date, end_date)
 
     # Full date range
-    all_dates = pd.date_range(start=start_date, end=end_date - pd.Timedelta(days=1))
+    all_dates = pd.date_range(start=start_date, end=end_date)
 
     if ohlc.empty:
         ohlc = pd.DataFrame(index=all_dates)
@@ -1908,3 +1908,54 @@ elif filter_mode == "Panchak":
     styled_df = merged.style.apply(highlight_moon_rows, axis=1)
     html_table = styled_df.to_html()
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
+
+    # --- 📊 Post-Panchak Period ---
+    st.subheader("📊 Post-Panchak Period Analysis")
+
+    # Find next Panchak start date
+    future_rows = panchak_df[panchak_df['Start Date'] > end_date]
+    if not future_rows.empty:
+        next_start_date = future_rows.iloc[0]['Start Date']
+    else:
+        next_start_date = end_date + pd.Timedelta(days=10)
+
+    post_start_date = end_date + pd.Timedelta(days=1)
+    post_end_date = next_start_date
+
+    st.markdown(f"### ⏭️ Period: {post_start_date.date()} to {(post_end_date).date()}")
+
+
+    # Get OHLC for post-Panchak period
+    if selected_symbol in ["Nifty", "BankNifty"]:
+        post_ohlc = get_combined_index_data(selected_symbol, post_start_date, post_end_date)
+    else:
+        ticker = selected_symbol + ".NS"
+        post_ohlc = get_stock_data(ticker, post_start_date, post_end_date)
+
+    # Full date range
+    post_dates = pd.date_range(start=post_start_date, end=post_end_date - pd.Timedelta(days=1))
+
+    if post_ohlc.empty:
+        post_ohlc = pd.DataFrame(index=post_dates)
+        post_ohlc[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+    else:
+        post_ohlc = post_ohlc.reindex(post_dates)
+
+    # Merge with numerology
+    post_merged = post_ohlc.merge(numerology_subset, left_index=True, right_index=True, how='left')
+    post_merged = post_merged.loc[post_dates]
+    post_merged = post_merged.reset_index().rename(columns={"index": "Date"})
+
+    # High/Low display
+    if post_merged['High'].notna().any():
+        high_val = post_merged['High'].max()
+        low_val = post_merged['Low'].min()
+        st.markdown(f"**📈 High:** {high_val:.2f} | 📉 Low:** {low_val:.2f}")
+    else:
+        st.info("⚠ No OHLC data for post-Panchak period — only numerology shown.")
+
+    # Highlight moon phases
+    styled_post_df = post_merged.style.apply(highlight_moon_rows, axis=1)
+    post_html_table = styled_post_df.to_html()
+    st.markdown(f'<div class="scroll-table">{post_html_table}</div>', unsafe_allow_html=True)
+
