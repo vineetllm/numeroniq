@@ -1677,7 +1677,7 @@ elif filter_mode == "Mercury":
                     return [''] * len(row)
 
             # Render table
-            styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1)
+            styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
             html_table = styled_df.to_html()
             st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
@@ -1723,7 +1723,7 @@ elif filter_mode == "Mercury":
             return [''] * len(row)
 
     # Step 8: Display styled table
-    styled_df = index_combined_reset.style.apply(highlight_moon_rows, axis=1)
+    styled_df = index_combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
     html_table = styled_df.to_html()
     
 
@@ -1905,7 +1905,7 @@ elif filter_mode == "Panchak":
             return [''] * len(row)
 
     # Display styled table
-    styled_df = merged.style.apply(highlight_moon_rows, axis=1)
+    styled_df = merged.style.apply(highlight_moon_rows, axis=1).format(precision=2)
     html_table = styled_df.to_html()
     st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
@@ -1955,7 +1955,7 @@ elif filter_mode == "Panchak":
         st.info("⚠ No OHLC data for post-Panchak period — only numerology shown.")
 
     # Highlight moon phases
-    styled_post_df = post_merged.style.apply(highlight_moon_rows, axis=1)
+    styled_post_df = post_merged.style.apply(highlight_moon_rows, axis=1).format(precision=2)
     post_html_table = styled_post_df.to_html()
     st.markdown(f'<div class="scroll-table">{post_html_table}</div>', unsafe_allow_html=True)
 
