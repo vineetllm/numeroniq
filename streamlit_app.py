@@ -1798,7 +1798,7 @@ elif filter_mode == "Sun Number Dates":
     if not stock_data.empty:
         stock_data.index = pd.to_datetime(stock_data.index)
         numerology_merge = numerology_df.set_index('date')
-        merged = stock_data.merge(numerology_merge, left_index=True, right_index=True, how='left')
+        merged = stock_data.merge(numerology_merge, left_index=True, right_index=True, how='left').format(precision=2)
         
         # Render as HTML
         html_table = merged.reset_index().to_html()
