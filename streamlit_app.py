@@ -2111,7 +2111,9 @@ elif filter_mode == "Mercury Combust":
     combined_reset.rename(columns={'index': 'Date'}, inplace=True)
 
     styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
-    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
+    
+    html_table = styled_df.to_html()
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
     # INDEX SECTION
     st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
@@ -2133,6 +2135,8 @@ elif filter_mode == "Mercury Combust":
     index_combined_reset = index_combined.reset_index()
     index_combined_reset.rename(columns={'index': 'Date'}, inplace=True)
     styled_index = index_combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
-    st.markdown(styled_index.to_html(), unsafe_allow_html=True)
+    
+    html_table = styled_index.to_html()
+    st.markdown(f'<div class="scroll-table">{html_table}</div>', unsafe_allow_html=True)
 
 
