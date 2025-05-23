@@ -361,6 +361,7 @@ filter_mode = st.sidebar.radio(
         "Equinox",
         "Moon",
         "Mercury",
+        "Mercury Combust",
         "Sun Number Dates",
         "Panchak"])
 
@@ -2017,4 +2018,121 @@ elif filter_mode == "Panchak":
     styled_post_df = post_merged.style.apply(highlight_moon_rows, axis=1).format(precision=2)
     post_html_table = styled_post_df.to_html()
     st.markdown(f'<div class="scroll-table">{post_html_table}</div>', unsafe_allow_html=True)
+
+elif filter_mode == "Mercury Combust":
+    st.header("🔥 Mercury Combust Period Analysis")
+
+    # Load combustion data
+    combust_df = pd.read_excel("mercurycom.xlsx")
+    combust_df['Start Date'] = pd.to_datetime(combust_df['Start Date'], dayfirst=True)
+    combust_df['End Date'] = pd.to_datetime(combust_df['End Date'], dayfirst=True)
+
+    # Load moon data
+    moon_df = pd.read_excel("moon.xlsx")
+    moon_df['Date'] = pd.to_datetime(moon_df['Date'], dayfirst=True)
+    amavasya_dates = set(moon_df[moon_df['A/P'].str.lower() == 'amavasya']['Date'].dt.date)
+    poornima_dates = set(moon_df[moon_df['A/P'].str.lower() == 'poornima']['Date'].dt.date)
+
+    # Load numerology
+    numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True)
+
+    # Let user pick a date
+    # Generate list of valid dates from combustion periods
+    valid_dates = []
+    for _, row in combust_df.iterrows():
+        valid_dates.extend(pd.date_range(row['Start Date'], row['End Date']))
+    valid_dates = sorted(set(valid_dates))  # remove duplicates
+
+    # Filter to recent dates for default
+    recent_cutoff = pd.Timestamp.today().normalize() - pd.Timedelta(days=30)
+    recent_dates = [d for d in valid_dates if d >= recent_cutoff]
+
+    # Set default date to most recent or fallback to last date
+    default_date = recent_dates[0] if recent_dates else valid_dates[-1]
+
+    # Show dropdown of valid dates
+    selected_date = st.selectbox("Select a Date in Combust Period:", [d.date() for d in valid_dates], index=[d.date() for d in valid_dates].index(default_date.date()))
+
+
+    # Check combustion period
+    match = combust_df[(combust_df['Start Date'] <= pd.Timestamp(selected_date)) & (combust_df['End Date'] >= pd.Timestamp(selected_date))]
+
+    if match.empty:
+        st.warning("Selected date does not fall under any Mercury Combust period.")
+        st.stop()
+
+    start_date = match.iloc[0]['Start Date']
+    end_date = match.iloc[0]['End Date']
+
+    st.markdown(f"📅 **Combust Period:** {start_date.date()} to {end_date.date()}")
+    st.markdown(f"**Start Time:** {match.iloc[0]['Start Time']} | **End Time:** {match.iloc[0]['End Time']}")
+    st.markdown(f"**Start Degree:** {match.iloc[0]['Start Degree']} | **End Degree:** {match.iloc[0]['End Degree']}")
+
+    # SYMBOL SECTION
+    st.subheader("📈 Symbol OHLC + Numerology")
+    doc_df = pd.read_excel("doc.xlsx")
+    available_symbols = sorted(doc_df['Symbol'].dropna().unique().tolist())
+    selected_symbol = st.selectbox("Select Stock Symbol:", available_symbols)
+
+    listing_row = doc_df[doc_df['Symbol'] == selected_symbol]
+    if listing_row.empty or pd.isnull(listing_row.iloc[0]['DATE OF INCORPORATION']):
+        st.warning("Listing date unavailable.")
+        st.stop()
+    else:
+        listing_date = pd.to_datetime(listing_row.iloc[0]['DATE OF INCORPORATION'])
+        if start_date < listing_date:
+            st.warning(f"{selected_symbol} was not listed during this combustion period.")
+            st.stop()
+
+    # Get OHLCV data (replace with your method)
+    ticker = selected_symbol + ".NS"
+    stock_data = get_stock_data(ticker, start_date, end_date)
+    all_days = pd.date_range(start=start_date, end=end_date)
+
+    if stock_data.empty:
+        stock_data = pd.DataFrame(index=all_days)
+        stock_data[['Open', 'High', 'Low', 'Close', 'Volume']] = float('nan')
+    else:
+        stock_data = stock_data.reindex(all_days)
+
+    numerology_subset = numerology_df.set_index('date')
+    combined = stock_data.merge(numerology_subset, left_index=True, right_index=True, how='left')
+
+    # Highlight Moon Phases
+    def highlight_moon_rows(row):
+        d = row['Date'].date() if isinstance(row['Date'], pd.Timestamp) else None
+        if d in amavasya_dates:
+            return ['background-color: #ffcccc'] * len(row)
+        elif d in poornima_dates:
+            return ['background-color: #ccf2ff'] * len(row)
+        return [''] * len(row)
+
+    combined_reset = combined.reset_index()
+    combined_reset.rename(columns={'index': 'Date'}, inplace=True)
+
+    styled_df = combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
+    st.markdown(styled_df.to_html(), unsafe_allow_html=True)
+
+    # INDEX SECTION
+    st.subheader("📊 Nifty / BankNifty OHLC + Numerology")
+    index_choice = st.radio("Select Index:", ["Nifty 50", "Bank Nifty"])
+    index_file = "nifty.xlsx" if index_choice == "Nifty 50" else "banknifty.xlsx"
+
+    index_df = load_excel_data(index_file)
+    index_range = index_df[(index_df.index >= start_date) & (index_df.index <= end_date)].reindex(all_days)
+    index_combined = index_range.merge(numerology_subset, left_index=True, right_index=True, how='left')
+    index_combined = index_combined.loc[all_days]
+
+    if index_combined['High'].notna().any():
+        high_val = index_combined['High'].max()
+        low_val = index_combined['Low'].min()
+        st.markdown(f"**📈 High:** {high_val} | 📉 Low:** {low_val}")
+    else:
+        st.info("No index OHLC data available in this period.")
+
+    index_combined_reset = index_combined.reset_index()
+    index_combined_reset.rename(columns={'index': 'Date'}, inplace=True)
+    styled_index = index_combined_reset.style.apply(highlight_moon_rows, axis=1).format(precision=2)
+    st.markdown(styled_index.to_html(), unsafe_allow_html=True)
+
 
