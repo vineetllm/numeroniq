@@ -1584,11 +1584,29 @@ elif filter_mode == "Mercury":
     # Load numerology
     numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True)
 
-    # mercury Phase & Date
-    phase_choice = st.selectbox("Select mercury Phase:", ["Direct", "Retrograde"])
+    # Step 1: Let the user choose the Mercury phase
+    phase_choice = st.selectbox("Select Mercury Phase:", ["Direct", "Retrograde"])
+
+    # Step 2: Filter dates based on the chosen phase
     phase_filtered = mercury_df[mercury_df['D/R'].str.lower() == phase_choice.lower()]
-    available_dates = phase_filtered['Date'].dt.strftime("%Y-%m-%d").tolist()
-    selected_date_str = st.selectbox(f"Select a {phase_choice} Date:", available_dates)
+    available_dates = phase_filtered['Date'].dt.date.tolist()
+
+    # Step 3: Compute the default date (last 30 days logic)
+    today = pd.Timestamp.today().normalize()
+    one_month_ago = today - pd.Timedelta(days=30)
+    recent_dates = [d for d in available_dates if d >= one_month_ago.date()]
+
+    # If recent date found, use the first one, else fallback to latest available
+    default_date = recent_dates[0] if recent_dates else available_dates[-1]
+
+    # Step 4: Show in selectbox with pre-selected default
+    selected_date_str = st.selectbox(
+        f"Select a {phase_choice} Date:",
+        [d.strftime("%Y-%m-%d") for d in available_dates],
+        index=available_dates.index(default_date)
+    )
+
+    # Step 5: Parse the selected date
     selected_date = pd.to_datetime(selected_date_str)
 
     future_dates = mercury_df[mercury_df['Date'] > selected_date]
