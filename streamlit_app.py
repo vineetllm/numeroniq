@@ -1456,10 +1456,25 @@ elif filter_mode == "Moon":
 
     # Moon Phase & Date
     phase_choice = st.selectbox("Select Moon Phase:", ["Amavasya", "Poornima"])
+    # Filter moon phase based on user selection
     phase_filtered = moon_df[moon_df['A/P'].str.lower() == phase_choice.lower()]
-    available_dates = phase_filtered['Date'].dt.strftime("%Y-%m-%d").tolist()
-    selected_date_str = st.selectbox(f"Select a {phase_choice} Date:", available_dates)
+    available_dates = phase_filtered['Date'].dt.date.tolist()
+
+    # Determine default date within last 30 days if possible
+    today = pd.Timestamp.today().normalize()
+    one_month_ago = today - pd.Timedelta(days=30)
+
+    recent_dates = [d for d in available_dates if d >= one_month_ago.date()]
+    default_date = recent_dates[0] if recent_dates else available_dates[-1]  # fallback to latest
+
+    # Create selectbox with default selection
+    selected_date_str = st.selectbox(
+        f"Select a {phase_choice} Date:",
+        [d.strftime("%Y-%m-%d") for d in available_dates],
+        index=available_dates.index(default_date)
+    )
     selected_date = pd.to_datetime(selected_date_str)
+
 
     # Moon Info
     match = moon_df[moon_df['Date'].dt.date == selected_date.date()]
