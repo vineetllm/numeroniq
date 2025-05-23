@@ -1826,7 +1826,24 @@ elif filter_mode == "Panchak":
     selected_symbol = st.selectbox("Select Symbol", symbol_list)
 
     # Select Panchak start date
-    selected_start_date = st.selectbox("Select Panchak Start Date:", panchak_df['Start Date'].dt.date.unique())
+    # Define today's date and the cutoff for the last month
+    today = pd.Timestamp.today().normalize()
+    one_month_ago = today - pd.Timedelta(days=30)
+
+    # Find the most recent Panchak starting within the last month
+    recent_panchaks = panchak_df[panchak_df['Start Date'] >= one_month_ago]
+    if not recent_panchaks.empty:
+        default_start_date = recent_panchaks.iloc[0]['Start Date'].date()
+    else:
+        default_start_date = panchak_df['Start Date'].dt.date.max()
+
+    # Selectbox with default
+    selected_start_date = st.selectbox(
+        "Select Panchak Start Date:",
+        panchak_df['Start Date'].dt.date.unique(),
+        index=panchak_df['Start Date'].dt.date.tolist().index(default_start_date)
+    )
+
 
     # Get the corresponding row
     row = panchak_df[panchak_df['Start Date'].dt.date == selected_start_date].iloc[0]
