@@ -501,6 +501,7 @@ if filter_mode == "Filter by Sector/Symbol":
 
                     all_cols = cols_to_front + [col for col in all_numerology_df.columns if col not in cols_to_front]
                     
+                    
                     # Convert DataFrame to HTML table
                     html_table = all_numerology_df[all_cols].to_html(index=False, escape=False)
 
@@ -1356,12 +1357,12 @@ elif filter_mode == "Equinox":
         start_date = st.date_input(
             "Start Date", 
             value=pd.to_datetime("2024-04-01").date(),
-            min_value=min_date,
+            min_value=min_date, 
             max_value=max_date)
     with col2:
         end_date = st.date_input(
             "End Date", 
-            value=pd.to_datetime("2025-06-01").date(),  
+            value=pd.to_datetime("2025-06-01").date(), 
             min_value=min_date, 
             max_value=max_date)
 
@@ -1607,8 +1608,8 @@ elif filter_mode == "Mercury":
     # Load numerology
     numerology_df['date'] = pd.to_datetime(numerology_df['date'], dayfirst=True)
 
-    # Step 1: Let the user choose the Mercury phase
-    phase_choice = st.selectbox("Select Mercury Phase:", ["Direct", "Retrograde"])
+    # mercury Phase & Date
+    phase_choice = st.selectbox("Select mercury Phase:", ["Direct", "Retrograde"])
 
     # Step 2: Filter dates based on the chosen phase
     phase_filtered = mercury_df[mercury_df['D/R'].str.lower() == phase_choice.lower()]
@@ -1885,7 +1886,6 @@ elif filter_mode == "Panchak":
         index=panchak_df['Start Date'].dt.date.tolist().index(default_start_date)
     )
 
-
     # Get the corresponding row
     row = panchak_df[panchak_df['Start Date'].dt.date == selected_start_date].iloc[0]
     start_date = row['Start Date']
@@ -2011,7 +2011,8 @@ elif filter_mode == "Panchak":
         st.markdown(f"**📈 High:** {high_val:.2f} | 📉 Low:** {low_val:.2f}")
     else:
         st.info("⚠ No OHLC data for post-Panchak period — only numerology shown.")
-
+    
+    
     # Highlight moon phases
     styled_post_df = post_merged.style.apply(highlight_moon_rows, axis=1).format(precision=2)
     post_html_table = styled_post_df.to_html()
