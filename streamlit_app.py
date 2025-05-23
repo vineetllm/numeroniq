@@ -1353,9 +1353,17 @@ elif filter_mode == "Equinox":
     max_date = max(all_dates)
     col1, col2 = st.columns(2)
     with col1:
-        start_date = st.date_input("Start Date", value=min_date, min_value=min_date, max_value=max_date)
+        start_date = st.date_input(
+            "Start Date", 
+            value=pd.to_datetime("2024-04-01").date(),
+            min_value=min_date,
+            max_value=max_date)
     with col2:
-        end_date = st.date_input("End Date", value=max_date, min_value=min_date, max_value=max_date)
+        end_date = st.date_input(
+            "End Date", 
+            value=pd.to_datetime("2025-06-01").date(),  
+            min_value=min_date, 
+            max_value=max_date)
 
     if start_date > end_date:
         st.error("Start date must be before or equal to end date.")
