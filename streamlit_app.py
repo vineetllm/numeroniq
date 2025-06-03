@@ -11,17 +11,6 @@ import hashlib
 
 import streamlit.components.v1 as components
 
-# Inject JavaScript to ping the server every 5 minutes (300000 ms)
-keep_alive_script = """
-<script>
-    setInterval(() => {
-        fetch(window.location.href);
-    }, 300000); // 5 minutes
-</script>
-"""
-components.html(keep_alive_script)
-
-
 # Utility function to hash passwords
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
@@ -57,6 +46,17 @@ if not st.session_state.authenticated:
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
+
+# Inject JavaScript to ping the server every 5 minutes (300000 ms)
+keep_alive_script = """
+<script>
+    setInterval(() => {
+        fetch(window.location.href);
+    }, 300000); // 5 minutes
+</script>
+"""
+components.html(keep_alive_script)
+
 
 # Inject CSS and JS to disable text selection and right-click
 st.markdown("""
