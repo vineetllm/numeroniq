@@ -55,11 +55,6 @@ if not st.session_state.authenticated:
     login()
     st.stop()
 
-if st.session_state.authenticated:
-    keep_alive()
-    st.success(f"Welcome back, {st.session_state.username}!")
-    # Your main app code goes here
-
 
 # Set wide layout
 st.set_page_config(page_title="Numeroniq", layout="wide")
