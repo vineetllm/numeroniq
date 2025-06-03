@@ -11,17 +11,16 @@ import hashlib
 
 import streamlit.components.v1 as components
 
-def keep_alive():
-    components.html(
-        """
-        <script>
-        const interval = setInterval(() => {
-            fetch("/", {mode: 'no-cors'});
-        }, 60 * 1000);  // Ping every 60 seconds
-        </script>
-        """,
-        height=0,
-    )
+# Inject JavaScript to ping the server every 5 minutes (300000 ms)
+keep_alive_script = """
+<script>
+    setInterval(() => {
+        fetch(window.location.href);
+    }, 300000); // 5 minutes
+</script>
+"""
+components.html(keep_alive_script)
+
 
 # Utility function to hash passwords
 def hash_password(password):
