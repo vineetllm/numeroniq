@@ -9,6 +9,19 @@ import base64
 
 import hashlib
 
+import streamlit.components.v1 as components
+
+# Inject JavaScript to ping the server every 5 minutes (300000 ms)
+keep_alive_script = """
+<script>
+    setInterval(() => {
+        fetch(window.location.href);
+    }, 300000); // 5 minutes
+</script>
+"""
+components.html(keep_alive_script)
+
+
 # Utility function to hash passwords
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
